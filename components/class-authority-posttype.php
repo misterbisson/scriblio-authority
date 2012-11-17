@@ -3,6 +3,7 @@ class Authority_Posttype {
 
 	public $id_base = 'scrib-authority';
 	public $post_type_name = 'scrib-authority';
+	public $tools_page_id = 'scrib-authority-tools';
 	public $post_meta_key = 'scrib-authority';
 	public $cache_ttl = 259183; // a prime number slightly less than 3 days
 	public $taxonomies = array(); // unsanitized array of supported taxonomies by tax slug
@@ -23,10 +24,25 @@ class Authority_Posttype {
 		add_action( 'save_post', array( $this , 'enforce_authority_on_object' ) , 9 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 
-		add_action( 'manage_{$this->post_type_name}_posts_custom_column', array( $this, 'column' ), 10 , 2 );
-		add_action( 'manage_posts_custom_column', array( $this, 'column' ), 10 , 2 );
-		add_filter( 'manage_{$this->post_type_name}_posts_columns' , array( $this, 'columns' ) , 11 );
-		add_filter( 'manage_posts_columns' , array( $this, 'columns' ) , 11 );
+		if ( is_admin() )
+		{
+			add_action( 'manage_{$this->post_type_name}_posts_custom_column', array( $this, 'column' ), 10 , 2 );
+			add_action( 'manage_posts_custom_column', array( $this, 'column' ), 10 , 2 );
+			add_filter( 'manage_{$this->post_type_name}_posts_columns' , array( $this, 'columns' ) , 11 );
+			add_filter( 'manage_posts_columns' , array( $this, 'columns' ) , 11 );
+
+			add_action( 'admin_menu', array( $this, 'admin_menu' ) );
+		}
+	}
+
+	public function admin_menu()
+	{
+		add_submenu_page( 'edit.php?post_type=' . $this->post_type_name , 'Authority Record Tools' , 'Tools' , 'edit_posts' , $this->tools_page_id, array( $this , 'tools_page' ) );
+	}
+
+	public function tools_page()
+	{
+		include_once __DIR__ . '/templates/tools.php';
 	}
 
 	public function authority_results()

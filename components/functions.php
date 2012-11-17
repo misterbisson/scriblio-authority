@@ -25,3 +25,9 @@ function authority_easyterms()
 
 	return $authority_easyterms;
 }
+
+function new_authority_csv( $filename = FALSE , $columns = NULL , $delimiter = ',' , $enclosure = '"' )
+{
+	require_once dirname( __FILE__ ) . '/class-authority-csv.php';
+	return new Authority_Csv( $filename , $columns , $delimiter , $enclosure );
+}
