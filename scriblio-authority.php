@@ -27,20 +27,12 @@ License: GPL2
 
 
 // include required components
-require_once dirname( __FILE__ ) . '/components/class-authority.php';
-require_once dirname( __FILE__ ) . '/components/class-authority-posttype.php';
-require_once dirname( __FILE__ ) . '/components/class-authority-easyterms.php';
+require_once dirname( __FILE__ ) . '/components/functions.php';
 
-Authority::init();
+// Configure the supported taxonomies for authority records
+authority_record()->add_taxonomy( 'post_tag' );
+authority_record()->add_taxonomy( 'category' );
 
-Authority::easy_terms()->add_taxonomy( 'post_tag' );
-Authority::easy_terms()->add_taxonomy( 'category' );
-
-add_action( 'init' , 'scriblio_authority_init' );
-function scriblio_authority_init()
-{
-	Authority::supported_taxonomies( array(
-		'post_tag',
-		'category',
-	));
-}
+// Configure the supported taxonomies for easy terms
+authority_easyterms()->add_taxonomy( 'post_tag' );
+authority_easyterms()->add_taxonomy( 'category' );

@@ -5,6 +5,8 @@ class Authority_Posttype {
 	public $post_type_name = 'scrib-authority';
 	public $post_meta_key = 'scrib-authority';
 	public $cache_ttl = 259183; // a prime number slightly less than 3 days
+	public $taxonomies = array(); // unsanitized array of supported taxonomies by tax slug
+	public $taxonomy_objects = array(); // sanitized and validated array of taxonomy objects
 
 	public function __construct()
 	{
@@ -13,9 +15,9 @@ class Authority_Posttype {
 		add_action( 'wp_ajax_scrib_enforce_authority', array( $this, 'enforce_authority_on_corpus_ajax' ));
 		add_action( 'wp_ajax_scrib_create_authority_records', array( $this, 'create_authority_records_ajax' ));
 		add_filter( 'wp_ajax_scrib_term_report', array( $this, 'term_report_ajax' ) );
-		add_filter( 'wp_ajax_scrib_term_suffix_cleaner', array( $this, 'term_suffix_cleaner_ajax' ) );                                                                                                                                                                                             
+		add_filter( 'wp_ajax_scrib_term_suffix_cleaner', array( $this, 'term_suffix_cleaner_ajax' ) );
 
-		add_filter( 'wp_ajax_scrib_authority_results', array( $this, 'authority_results' ) );                                                                                                                                                                                             
+		add_filter( 'wp_ajax_scrib_authority_results', array( $this, 'authority_results' ) );
 
 		add_action( 'save_post', array( $this , 'save_post' ));
 		add_action( 'save_post', array( $this , 'enforce_authority_on_object' ) , 9 );
@@ -75,7 +77,7 @@ class Authority_Posttype {
 		if( ! $term_id_and_tax )
 		{
 			$error = new WP_Error( 'invalid_ttid' , 'Invalid term taxonomy ID' );
-			return $error;			
+			return $error;
 		}
 
 		return get_term( (int) $term_id_and_tax->term_id , $term_id_and_tax->taxonomy );
@@ -144,7 +146,7 @@ class Authority_Posttype {
 	 * simplifies a taxonomy object so that it only includes the elements
 	 * that matter to JSON transporting
 	 */
-	public function simplify_taxonomy_for_json( $taxonomy ) 
+	public function simplify_taxonomy_for_json( $taxonomy )
 	{
 		$tax = new StdClass;
 
@@ -193,7 +195,7 @@ class Authority_Posttype {
 				}
 
 				$parts = array_map( 'trim' , (array) explode( ':' , $blobette ));
-	
+
 				if( 'tag' == $parts[0] ) // parts[0] is the taxonomy
 					$parts[0] = 'post_tag';
 
@@ -341,7 +343,7 @@ class Authority_Posttype {
 	public function save_post( $post_id )
 	{
 		// check that this isn't an autosave
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
 			return;
 
 		// don't run on post revisions (almost always happens just before the real post is saved)
@@ -361,7 +363,7 @@ class Authority_Posttype {
 
 		// check the permissions
 		if( ! current_user_can( 'edit_post' , $post_id ))
-			return;	
+			return;
 
 		// get the old data
 		$instance = $this->get_post_meta( $post_id );
@@ -409,7 +411,7 @@ class Authority_Posttype {
 
 		?>
 		<label class="screen-reader-text" for="<?php echo $tpl->field_id; ?>">Primary term</label>
-		<input type="text" name="<?php echo $tpl->field_name; ?>" tabindex="x" id="<?php echo $tpl->field_id; ?>" placeholder="Authoritative term" value="<?php echo $tpl->primary_termname; ?>" /> 
+		<input type="text" name="<?php echo $tpl->field_name; ?>" tabindex="x" id="<?php echo $tpl->field_id; ?>" placeholder="Authoritative term" value="<?php echo $tpl->primary_termname; ?>" />
 		(<a href="<?php echo $tpl->edit_term_link; ?>">edit term</a>)
 
 		<p>@TODO: in addition to automatically suggesting terms (and their taxonomy), we'll have to check that the term is not already associated with another authority record.</p>
@@ -419,9 +421,9 @@ class Authority_Posttype {
 	public function metab_alias_terms( $post )
 	{
 		$taxonomies = array();
-		$taxonomy_objects = Authority::supported_taxonomies();
+		$taxonomy_objects = $this->supported_taxonomies();
 		foreach( $taxonomy_objects as $key => $taxonomy ) {
-			if( 
+			if(
 				'category' == $key ||
 				'post_format' == $key
 			) {
@@ -433,7 +435,7 @@ class Authority_Posttype {
 
 		$aliases = array();
 		$json = array();
-		if ( $this->instance['alias_terms'] ) 
+		if ( $this->instance['alias_terms'] )
 		{
 			foreach( $this->instance['alias_terms'] as $term )
 			{
@@ -502,8 +504,8 @@ class Authority_Posttype {
 
 	public function metab_family_terms( $post )
 	{
-		$children_prep = $this->metab_family_prep( 'child', $this->instance ); 
-		$parents_prep = $this->metab_family_prep( 'parent', $this->instance ); 
+		$children_prep = $this->metab_family_prep( 'child', $this->instance );
+		$parents_prep = $this->metab_family_prep( 'parent', $this->instance );
 
 		$children = $children_prep->data;
 		$parents = $parents_prep->data;
@@ -547,7 +549,7 @@ class Authority_Posttype {
 		// @TODO: need metaboxes for links and arbitrary values (ticker symbol, etc)
 
 		// remove the taxonomy metaboxes so we don't get confused
-		$taxonomies = Authority::supported_taxonomies();
+		$taxonomies = $this->supported_taxonomies();
 		foreach( $taxonomies as $taxomoy )
 		{
 			if( $taxomoy->hierarchical )
@@ -559,7 +561,7 @@ class Authority_Posttype {
 
 	public function control_taxonomies( $field_name )
 	{
-		$taxonomies = Authority::supported_taxonomies();
+		$taxonomies = $this->supported_taxonomies();
 		ksort( $taxonomies );
 
 		$tpl = new StdClass;
@@ -599,9 +601,49 @@ class Authority_Posttype {
 		return $target;
 	}//end prep_sub_terms
 
+	public function add_taxonomy( $taxonomy )
+	{
+		$this->taxonomies[ $taxonomy ] = $taxonomy;
+	}
+
+	public function supported_taxonomies( $support = null )
+	{
+		if ( $support )
+		{
+			$this->taxonomy_objects = get_taxonomies( array( 'public' => true ), 'objects' );
+
+			$purge = array_diff( array_keys( $this->taxonomy_objects ), $support );
+
+			foreach( $purge as $remove )
+			{
+				unset( $this->taxonomy_objects[ $remove ] );
+			}//end foreach
+
+			// sort taxonomies by the singular name
+			uasort( $this->taxonomy_objects, array( $this , '_sort_taxonomies' ));
+		}//end if
+
+		return $this->taxonomy_objects;
+	}//end supported_taxonomies
+
+	public function _sort_taxonomies( $a , $b )
+	{
+		if ( $a->labels->singular_name == $b->labels->singular_name )
+		{
+			return 0;
+		}//end if
+
+		if ( 'post_tag' == $b->name  )
+		{
+			return -1;
+		}//end if
+
+		return $a->labels->singular_name < $b->labels->singular_name ? -1 : 1;
+	}
+
 	public function register_post_type()
 	{
-		$taxonomies = Authority::supported_taxonomies();
+		$taxonomies = $this->supported_taxonomies( $this->taxonomies );
 
 		register_post_type( $this->post_type_name,
 			array(
@@ -609,9 +651,9 @@ class Authority_Posttype {
 					'name' => __( 'Authority Records' ),
 					'singular_name' => __( 'Authority Record' ),
 				),
-				'supports' => array( 
-					'title', 
-					'excerpt', 
+				'supports' => array(
+					'title',
+					'excerpt',
 //					'editor',
 					'thumbnail',
 				),
@@ -707,7 +749,7 @@ class Authority_Posttype {
 		$columns[ $this->id_base .'_alias_terms' ] = 'Alias Terms';
 		$columns[ $this->id_base .'_parent_terms' ] = 'Parent Terms';
 		$columns[ $this->id_base .'_child_terms' ] = 'Child Terms';
- 
+
 		return $columns;
   	}
 
@@ -740,7 +782,7 @@ class Authority_Posttype {
 		else
 		{
 			// @TODO: this used to be configurable in the dashboard.
-			$taxonomy = array_keys( Authority::supported_taxonomies() );
+			$taxonomy = array_keys( $this->supported_taxonomies() );
 		}//end else
 
 		// generate a key we can use to cache these results
@@ -759,7 +801,7 @@ class Authority_Posttype {
 
 			// get the matching terms
 			$sql = "
-				SELECT 
+				SELECT
 					t.term_id,
 					t.name,
 					t.slug,
@@ -768,28 +810,28 @@ class Authority_Posttype {
 					( ( 100 - t.len ) * tt.count ) AS hits
 				FROM
 					(
-						SELECT 
-							term_id, 
-							name, 
+						SELECT
+							term_id,
+							name,
 							slug,
 							LENGTH(name) AS len
 						FROM
 							{$wpdb->terms}
-						WHERE 
+						WHERE
 							slug LIKE ( %s )
-						ORDER BY 
+						ORDER BY
 							len ASC
 						LIMIT 100
 					) t
-				JOIN {$wpdb->term_taxonomy} AS tt 
+				JOIN {$wpdb->term_taxonomy} AS tt
 					ON tt.term_id = t.term_id
 				 AND tt.taxonomy IN ('" . implode( "','", $taxonomy ). "')
-				ORDER BY 
+				ORDER BY
 					hits DESC
 				LIMIT 25;
 			";
 
-			$terms = $wpdb->get_results( 
+			$terms = $wpdb->get_results(
 				$wpdb->prepare(
 					$sql,
 					sanitize_title( $s ) . '%'
@@ -850,7 +892,7 @@ class Authority_Posttype {
 			return;
 
 		// get the terms to work with
-		$terms = wp_get_object_terms( $object_id , array_keys( Authority::supported_taxonomies() ) );
+		$terms = wp_get_object_terms( $object_id , array_keys( $this->supported_taxonomies() ) );
 
 		$delete_terms = array();
 
@@ -895,8 +937,8 @@ class Authority_Posttype {
 	public function enforce_authority_on_corpus_ajax()
 	{
 		if( $_REQUEST['authority_post_id'] && $this->get_post_meta( (int) $_REQUEST['authority_post_id'] ))
-			$result = $this->enforce_authority_on_corpus( 
-				(int) $_REQUEST['authority_post_id'] , 
+			$result = $this->enforce_authority_on_corpus(
+				(int) $_REQUEST['authority_post_id'] ,
 				( is_numeric( $_REQUEST['posts_per_page'] ) ? (int) $_REQUEST['posts_per_page'] : 50 ) ,
 				( is_numeric( $_REQUEST['paged'] ) ? (int) $_REQUEST['paged'] : 0 )
 		);
@@ -1038,7 +1080,7 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 			return $post_id;
 
 		$instance = array();
-		
+
 		// primary term meta
 		$instance['primary_term'] = $primary_term;
 		$instance['primary_tax'] = $primary_term->taxonomy;
@@ -1066,10 +1108,10 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 		if( ! ( is_taxonomy( $_REQUEST['old_tax'] ) && is_taxonomy( $_REQUEST['new_tax'] )))
 			return FALSE;
 
-		$result = $this->create_authority_records( 
-			$_REQUEST['old_tax'] , 
-			$_REQUEST['new_tax'] , 
-			( is_numeric( $_REQUEST['posts_per_page'] ) ? (int) $_REQUEST['posts_per_page'] : 5 ) , 
+		$result = $this->create_authority_records(
+			$_REQUEST['old_tax'] ,
+			$_REQUEST['new_tax'] ,
+			( is_numeric( $_REQUEST['posts_per_page'] ) ? (int) $_REQUEST['posts_per_page'] : 5 ) ,
 			( is_numeric( $_REQUEST['paged'] ) ? (int) $_REQUEST['paged'] : 0 )
 		);
 
@@ -1152,7 +1194,7 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 
 		// this can use a lot of memory and time
 		ini_set( 'memory_limit', '1024M' );
-		set_time_limit( 900 ); 
+		set_time_limit( 900 );
 
 		// sanitize the taxonomy we're reporting on
 		$taxonomy = taxonomy_exists( $_GET['taxonomy'] ) ? $_GET['taxonomy'] : 'post_tag';
@@ -1172,8 +1214,7 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 		);
 
 		// get the CSV class
-		require_once dirname( __FILE__ ) . '/class-authority-csv.php';
-		$csv = new Authority_Csv( $taxonomy .'-'. date( 'r' ) , $columns );
+		$csv = new_authority_csv( $taxonomy .'-'. date( 'r' ) , $columns );
 
 		// prepare and execute the query
 		global $wpdb;
@@ -1250,7 +1291,7 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 		// prepare and execute the query
 		global $wpdb;
 		$query = $wpdb->prepare( "
-			SELECT * 
+			SELECT *
 			FROM(
 				SELECT *
 				FROM $wpdb->terms
@@ -1278,7 +1319,7 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 			// check to see if there's an existing term taxonomy record for the clean term
 			if( $alternate_term = get_term_by( 'slug' , $clean_slug , $term->taxonomy ))
 			{
-				echo '<h3>Other term_taxonomy_record fount for  '. $term->slug .': '. $alternate_term->slug .'</h3>'; 
+				echo '<h3>Other term_taxonomy_record fount for  '. $term->slug .': '. $alternate_term->slug .'</h3>';
 				$alternate_term_id = (int) $alternate_term->term_id;
 
 				// get all the posts with the ugly term, update them with the clean term
@@ -1287,17 +1328,17 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 				foreach( $posts as $post_id )
 				{
 					wp_set_object_terms( $post_id, $alternate_term->term_id, $term->taxonomy, TRUE );
-					echo '<li>Updated post id <a href="'. get_edit_post_link( $post_id ) .'">'. $post_id .'</a> with term '. $clean_slug .'</li>'; 
+					echo '<li>Updated post id <a href="'. get_edit_post_link( $post_id ) .'">'. $post_id .'</a> with term '. $clean_slug .'</li>';
 				}
 				echo '</ul>';
-	
+
 				// be tidy
 				wp_delete_term( $term->term_id, $term->taxonomy );
 			}
 			// okay, lets now see if the clean term exists in the term table at all and update the existing term taxonomy record with it
 			else if( $alternate_term_id = (int) term_exists( $clean_slug ))
 			{
-				echo '<h3>Reassigning term_taxonomy record from '. $term->slug .' to  '. $clean_slug .'</h3>'; 
+				echo '<h3>Reassigning term_taxonomy record from '. $term->slug .' to  '. $clean_slug .'</h3>';
 
 				$query = $wpdb->prepare( "
 					UPDATE $wpdb->term_taxonomy AS tt
@@ -1310,7 +1351,7 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 			// crap, didn't find a clean term, how did we get here?
 			else
 			{
-				echo '<h3>No alternate found for '. $term->slug .'</h3>'; 
+				echo '<h3>No alternate found for '. $term->slug .'</h3>';
 				continue;
 			}
 		}
