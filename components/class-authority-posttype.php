@@ -11,6 +11,8 @@ class Authority_Posttype {
 
 	public function __construct()
 	{
+		$this->plugin_url = plugin_dir_url( __FILE__ );
+
 		add_action( 'init' , array( $this, 'register_post_type' ) , 11 );
 
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
@@ -26,10 +28,11 @@ class Authority_Posttype {
 
 		add_action( 'save_post', array( $this , 'save_post' ));
 		add_action( 'save_post', array( $this , 'enforce_authority_on_object' ) , 9 );
-		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 
 		if ( is_admin() )
 		{
+			add_action( 'admin_enqueue_scripts', array( $this , 'enqueue_scripts' ) );
+
 			add_action( 'manage_{$this->post_type_name}_posts_custom_column', array( $this, 'column' ), 10 , 2 );
 			add_action( 'manage_posts_custom_column', array( $this, 'column' ), 10 , 2 );
 			add_filter( 'manage_{$this->post_type_name}_posts_columns' , array( $this, 'columns' ) , 11 );
@@ -76,17 +79,17 @@ class Authority_Posttype {
 
 	public function enqueue_scripts()
 	{
-		wp_register_style('scrib-authority', plugin_dir_url( __FILE__ ) . '/css/scrib-authority.structure.css', array(), '3');
-		wp_register_script('scrib-authority', plugin_dir_url( __FILE__ ) . '/js/jquery.scrib-authority.js', array('jquery'), '3', TRUE);
-		wp_register_script('scrib-authority-behavior', plugin_dir_url( __FILE__ ) . '/js/scrib-authority-behavior.js', array('jquery', 'scrib-authority'), '1', TRUE);
+		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , '3' );
+		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , '3' , TRUE );
+		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , '1' , TRUE );
 
-		wp_enqueue_style('scrib-authority');
-		wp_enqueue_script('scrib-authority');
-		wp_enqueue_script('scrib-authority-behavior');
+		wp_enqueue_style( 'scrib-authority' );
+		wp_enqueue_script( 'scrib-authority' );
+		wp_enqueue_script( 'scrib-authority-behavior' );
 	}//end enqueue_scripts
 
 	// I'm pretty sure the only reason why terms aren't fetchable by TTID has to do with the history of WPMU and sitewide terms.
-	// In this case, we need a UI input terms from multiple taxonomies, so we use the TTID to represent the term in the form element,
+	// In this case, we need a UI that accepts terms from multiple taxonomies, so we use the TTID to represent the term in the form element,
 	// and we need this function to translate those TTIDs into real terms for storage when the form is submitted.
 	public function get_term_by_ttid( $tt_id )
 	{
@@ -125,7 +128,7 @@ class Authority_Posttype {
 
 		// query to find a matching authority record
 		$query = array(
-			'numberposts' => 1,
+			'numberposts' => 10,
 			'post_type' => $this->post_type_name,
 			'tax_query' => array(
 				array(
@@ -153,6 +156,14 @@ class Authority_Posttype {
 
 			$return = array_intersect_key( (array) $authority_meta , $return );
 			$return['post_id'] = $authority[0]->ID;
+
+			if( 1 < count( $authority ))
+			{
+				foreach( $authority as $conflict )
+				{
+					$return['conflict_ids'][] = $conflict->ID;
+				}
+			}
 
 			wp_cache_set( $term->term_taxonomy_id , (object) $return , 'scrib_authority_ttid' , $this->cache_ttl );
 			return (object) $return;
@@ -335,7 +346,6 @@ class Authority_Posttype {
 
 	public function update_post_meta( $post_id , $meta_array )
 	{
-
 		// make sure meta is added to the post, not a revision
 		if ( $_post_id = wp_is_post_revision( $post_id ))
 			$post_id = $_post_id;
@@ -431,25 +441,17 @@ class Authority_Posttype {
 		$new_instance = stripslashes_deep( $_POST[ $this->id_base ] );
 
 		// primary (authoritative) taxonomy term
-		$primary_term = get_term_by( 'slug' , $new_instance['primary_termname'] , $new_instance['primary_tax'] );
-		if( isset( $primary_term->term_taxonomy_id ))
-		{
-			$instance['primary_term'] = $primary_term;
-			$instance['primary_tax'] = $primary_term->taxonomy;
-			$instance['primary_termname'] = $primary_term->name;
-
-			// clear the authority cache for this term
-			$this->delete_term_authority_cache( $primary_term );
-		}
+		$instance = $this->_parse_terms( 'primary_term', $new_instance, $instance, TRUE, 1 );
+		$instance['primary_term'] = $instance['primary_term'][0];
 
 		// alias terms
-		$instance = $this->prep_sub_terms( 'alias', $new_instance, $instance, TRUE );
+		$instance = $this->_parse_terms( 'alias_terms', $new_instance, $instance, TRUE );
 
 		// parent terms
-		$instance = $this->prep_sub_terms( 'parent', $new_instance, $instance );
+		$instance = $this->_parse_terms( 'parent_terms', $new_instance, $instance );
 
 		// child terms
-		$instance = $this->prep_sub_terms( 'child', $new_instance, $instance );
+		$instance = $this->_parse_terms( 'child_terms', $new_instance, $instance );
 
 		// save it
 		$this->update_post_meta( $post_id , $instance );
@@ -460,7 +462,6 @@ class Authority_Posttype {
 		$this->nonce_field();
 
 		$this->get_post_meta( $post->ID );
-		$this->control_taxonomies( 'primary_tax' );
 
 		$tpl = new StdClass;
 		$tpl->field_id = $this->get_field_id( 'primary_termname' );
@@ -468,13 +469,62 @@ class Authority_Posttype {
 		$tpl->primary_termname = $this->instance['primary_termname'];
 		$tpl->edit_term_link = get_edit_term_link( $this->instance['primary_term']->term_id , $this->instance['primary_term']->taxonomy );
 
-		?>
-		<label class="screen-reader-text" for="<?php echo $tpl->field_id; ?>">Primary term</label>
-		<input type="text" name="<?php echo $tpl->field_name; ?>" tabindex="x" id="<?php echo $tpl->field_id; ?>" placeholder="Authoritative term" value="<?php echo $tpl->primary_termname; ?>" />
+		$taxonomies = array();
+		$taxonomy_objects = $this->supported_taxonomies();
+		foreach( $taxonomy_objects as $key => $taxonomy ) {
+			if(
+				'category' == $key ||
+				'post_format' == $key
+			) {
+				continue;
+			}//end if
+
+			$taxonomies[ $key ] = $this->simplify_taxonomy_for_json( $taxonomy );
+		}//end foreach
+
+		$primary_term = array();
+		$json = array();
+		if ( $this->instance['primary_term'] )
+		{
+			$primary_term[ $this->instance['primary_term']->term_taxonomy_id ] = $this->instance['primary_term']->taxonomy .':'. $this->instance['primary_term']->slug;
+
+			// check for any conflicts with this term
+			$authority_conflicts = array();
+			$authority_check = $this->get_term_authority( $term );
+			if ( isset( $authority_check->conflict_ids ) )
+			{
+				$authority_conflicts[] = (object) array(
+					'term' => $this->instance['primary_term'],
+					'post_ids' => $authority_check->conflict_ids,
+				);
+			}
+
+			// add this to the JS var of terms already on the record
+			$json[] = array(
+				'taxonomy' => $taxonomies[ $this->instance['primary_term']->taxonomy ],
+				'term' => $this->instance['primary_term']->name,
+				'data' => array(
+					'term' => "{$this->instance['primary_term']->taxonomy}:{$this->instance['primary_term']->slug}",
+				),
+			);
+		}//end if
+?>
+		<script>
+			ajaxurl = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
+			if ( ! scrib_authority_data ) {
+				var scrib_authority_data = {};
+			}//end if
+
+			if ( ! scrib_authority_taxonomies ) {
+				var scrib_authority_taxonomies = <?php echo json_encode( $taxonomies ); ?>;
+			}//end if
+
+			scrib_authority_data['primary'] = <?php echo json_encode( $json ); ?>;
+		</script>
+		<label class="" for="<?php echo $this->get_field_id( 'primary_term' ); ?>">The primary term is the authoritative way to reference this thing or concept</label><textarea rows="3" cols="50" name="<?php echo $this->get_field_name( 'primary_term' ); ?>" id="<?php echo $this->get_field_id( 'primary_term' ); ?>"><?php echo implode( ', ' , (array) $primary_term ); ?></textarea>
 		(<a href="<?php echo $tpl->edit_term_link; ?>">edit term</a>)
 
-		<p>@TODO: in addition to automatically suggesting terms (and their taxonomy), we'll have to check that the term is not already associated with another authority record.</p>
-		<?php
+<?php
 	}
 
 	public function metab_alias_terms( $post )
@@ -496,14 +546,28 @@ class Authority_Posttype {
 		$json = array();
 		if ( $this->instance['alias_terms'] )
 		{
+			$authority_conflicts = array();
 			foreach( $this->instance['alias_terms'] as $term )
 			{
+				// make sure this is a working taxonomy
 				if ( ! $taxonomies[ $term->taxonomy ] )
 				{
 					continue;
 				}//end if
 
 				$aliases[ $term->term_taxonomy_id ] = $term->taxonomy .':'. $term->slug;
+
+				// check for any conflicts with this term
+				$authority_check = $this->get_term_authority( $term );
+				if ( isset( $authority_check->conflict_ids ) )
+				{
+					$authority_conflicts[] = (object) array(
+						'term' => $term,
+						'post_ids' => $authority_check->conflict_ids,
+					);
+				}
+
+				// add this to the JS var of terms already on the record
 				$json[] = array(
 					'taxonomy' => $taxonomies[ $term->taxonomy ],
 					'term' => $term->name,
@@ -515,25 +579,38 @@ class Authority_Posttype {
 		}//end if
 ?>
 		<script>
-			ajaxurl = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
 			if ( ! scrib_authority_data ) {
 				var scrib_authority_data = {};
 			}//end if
 
-			if ( ! scrib_authority_taxonomies ) {
-				var scrib_authority_taxonomies = <?php echo json_encode( $taxonomies ); ?>;
-			}//end if
-
 			scrib_authority_data['alias'] = <?php echo json_encode( $json ); ?>;
 		</script>
-		<label class="screen-reader-text" for="<?php echo $this->get_field_id( 'alias_terms' ); ?>">Alias terms</label><textarea rows="3" cols="50" name="<?php echo $this->get_field_name( 'alias_terms' ); ?>" id="<?php echo $this->get_field_id( 'alias_terms' ); ?>"><?php echo implode( ', ' , (array) $aliases ); ?></textarea>
+		<label class="" for="<?php echo $this->get_field_id( 'alias_terms' ); ?>">Alias terms are synonyms of the primary term</label><textarea rows="3" cols="50" name="<?php echo $this->get_field_name( 'alias_terms' ); ?>" id="<?php echo $this->get_field_id( 'alias_terms' ); ?>"><?php echo implode( ', ' , (array) $aliases ); ?></textarea>
 
-<p>An example set of alias terms for the term company:Apple Inc. might include company:Apple Computer, company:AAPL, company:Apple, tag:Apple Computer</p>
-<p>Tech requirement: in addition to automatically suggesting terms (and their taxonomy), we'll have to check that the term is not already associated with another authority record.</p>
-<?php
+		<?php
+		if( count( $authority_conflicts ))
+		{
+			echo '<h4>Ambiguous term warning!</h4><ul>';
+			foreach( $authority_conflicts as $conflict )
+			{
+				echo '<li>&#147;'. $conflict->term->name .'&#148; is referenced in '. ( count( $conflict->post_ids ) - 1 ) .' additional authority records<ol>';
+	
+				foreach( $conflict->post_ids as $conflict_post_id )
+				{
+					if( $post->ID == $conflict_post_id )
+					{
+						continue;
+					}
+
+					echo '<li><a href="'. get_edit_post_link( $conflict_post_id ) .'">'.  get_the_title( $conflict_post_id ) .'</a></li>';
+				}
+				echo '</ol></li>';
+			}
+			echo '</ul>';
+		}
 	}
 
-	public function metab_family_prep( $which, $collection )
+	public function _metab_family_prep( $which, $collection )
 	{
 		$return = new StdClass;
 		$return->data = array();
@@ -563,8 +640,8 @@ class Authority_Posttype {
 
 	public function metab_family_terms( $post )
 	{
-		$children_prep = $this->metab_family_prep( 'child', $this->instance );
-		$parents_prep = $this->metab_family_prep( 'parent', $this->instance );
+		$children_prep = $this->_metab_family_prep( 'child', $this->instance );
+		$parents_prep = $this->_metab_family_prep( 'parent', $this->instance );
 
 		$children = $children_prep->data;
 		$parents = $parents_prep->data;
@@ -579,15 +656,11 @@ class Authority_Posttype {
 			scrib_authority_data['parents'] = <?php echo json_encode( $parents_prep->detail ); ?>;
 		</script>
 
-		<label for="<?php echo $this->get_field_id( 'parent_terms' ); ?>">Parent terms</label>
+		<label for="<?php echo $this->get_field_id( 'parent_terms' ); ?>">Parent terms describe the broader categories into which the primary term fits</label>
 		<textarea rows="3" cols="50" name="<?php echo $this->get_field_name( 'parent_terms' ); ?>" id="<?php echo $this->get_field_id( 'parent_terms' ); ?>"><?php echo implode( ', ' , $parents ); ?></textarea>
 
-		<label for="<?php echo $this->get_field_id( 'child_terms' ); ?>">Child terms</label>
+		<label for="<?php echo $this->get_field_id( 'child_terms' ); ?>">Child terms describe more specific variations of the primary term</label>
 		<textarea rows="3" cols="50" name="<?php echo $this->get_field_name( 'child_terms' ); ?>" id="<?php echo $this->get_field_id( 'child_terms' ); ?>"><?php echo implode( ', ' , $children ); ?></textarea>
-
-<p>This area is where we'll relate this term to others that are broader or narrower.</p>
-<p>Broader terms for product:iPhone might include company:Apple Inc., product:iOS Devices, product:smartphones.</p>
-<p>Narrower terms for product:iPhone might include product:iPhone 4, product:iPhone 4S.</p>
 <?php
 	}
 
@@ -599,7 +672,7 @@ class Authority_Posttype {
 	public function metaboxes()
 	{
 		// add metaboxes
-		add_meta_box( 'scrib-authority-primary' , 'Authoritive Term' , array( $this , 'metab_primary_term' ) , $this->post_type_name , 'normal', 'high' );
+		add_meta_box( 'scrib-authority-primary' , 'Primary Term' , array( $this , 'metab_primary_term' ) , $this->post_type_name , 'normal', 'high' );
 		add_meta_box( 'scrib-authority-alias' , 'Alias Terms' , array( $this , 'metab_alias_terms' ) , $this->post_type_name , 'normal', 'high' );
 		add_meta_box( 'scrib-authority-family' , 'Family Terms' , array( $this , 'metab_family_terms' ) , $this->post_type_name , 'normal', 'high' );
 		add_meta_box( 'scrib-authority-enforce' , 'Enforce' , array( $this , 'metab_enforce' ) , $this->post_type_name , 'normal', 'low' );
@@ -639,26 +712,34 @@ class Authority_Posttype {
 		<?php
 	}
 
-	public function prep_sub_terms( $which, $source, $target, $delete_cache = FALSE )
+	public function _parse_terms( $which , $source , $target , $delete_cache = FALSE , $limit = 0 )
 	{
-		$target[ $which . '_terms'] = array();
-		foreach( (array) $this->parse_terms_from_string( $source[ $which . '_terms'] ) as $term )
+		$target[ $which ] = array();
+		foreach( (array) $this->parse_terms_from_string( $source[ $which ] ) as $term )
 		{
-				// don't insert the primary term as a child, that's just silly
-				if( $term->term_taxonomy_id == $target['primary_term']->term_taxonomy_id )
-				{
-					continue;
-				}//end if
-
-				$target[ $which . '_terms'][] = $term;
-				if ( $delete_chache )
-				{
-					$this->delete_term_authority_cache( $term );
-				}//end if
+			// don't insert the primary term as a child, that's just silly
+			if( 
+				( $which != 'primary_term' ) && 
+				( $term->term_taxonomy_id == $target['primary_term']->term_taxonomy_id )
+			)
+			{
+				continue;
+			}//end if
+			
+			$target[ $which ][] = $term;
+			if ( $delete_chache )
+			{
+				$this->delete_term_authority_cache( $term );
+			}//end if
 		}//end foreach
 
+		if( $limit )
+		{
+			$target[ $which ] = array_slice( $target[ $which ] , 0 , $limit );
+		}
+
 		return $target;
-	}//end prep_sub_terms
+	}//end _parse_terms
 
 	public function add_taxonomy( $taxonomy )
 	{
@@ -1142,8 +1223,6 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 
 		// primary term meta
 		$instance['primary_term'] = $primary_term;
-		$instance['primary_tax'] = $primary_term->taxonomy;
-		$instance['primary_termname'] = $primary_term->name;
 
 		// create the meta for the alias terms
 		foreach( $alias_terms as $term )
