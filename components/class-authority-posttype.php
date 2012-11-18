@@ -463,12 +463,6 @@ class Authority_Posttype {
 
 		$this->get_post_meta( $post->ID );
 
-		$tpl = new StdClass;
-		$tpl->field_id = $this->get_field_id( 'primary_termname' );
-		$tpl->field_name = $this->get_field_name( 'primary_termname' );
-		$tpl->primary_termname = $this->instance['primary_termname'];
-		$tpl->edit_term_link = get_edit_term_link( $this->instance['primary_term']->term_id , $this->instance['primary_term']->taxonomy );
-
 		$taxonomies = array();
 		$taxonomy_objects = $this->supported_taxonomies();
 		foreach( $taxonomy_objects as $key => $taxonomy ) {
@@ -522,7 +516,7 @@ class Authority_Posttype {
 			scrib_authority_data['primary'] = <?php echo json_encode( $json ); ?>;
 		</script>
 		<label class="" for="<?php echo $this->get_field_id( 'primary_term' ); ?>">The primary term is the authoritative way to reference this thing or concept</label><textarea rows="3" cols="50" name="<?php echo $this->get_field_name( 'primary_term' ); ?>" id="<?php echo $this->get_field_id( 'primary_term' ); ?>"><?php echo implode( ', ' , (array) $primary_term ); ?></textarea>
-		(<a href="<?php echo $tpl->edit_term_link; ?>">edit term</a>)
+		(<a href="<?php echo get_edit_term_link( $this->instance['primary_term']->term_id , $this->instance['primary_term']->taxonomy );; ?>">edit term</a>)
 
 <?php
 	}
@@ -689,27 +683,6 @@ class Authority_Posttype {
 			else
 				remove_meta_box( 'tagsdiv-'. $taxomoy->name , 'scrib-authority' , FALSE );
 		}
-	}
-
-	public function control_taxonomies( $field_name )
-	{
-		$taxonomies = $this->supported_taxonomies();
-		ksort( $taxonomies );
-
-		$tpl = new StdClass;
-		$tpl->field_id = $this->get_field_id( $field_name );
-		$tpl->field_name = $this->get_field_name( $field_name );
-		$tpl->field = $this->instance[ $field_name ];
-		$tpl->taxonomies = $taxonomies;
-
-		?>
-			<label class="screen-reader-text" for="<?php echo $tpl->field_id; ?>">Select taxonomy</label>
-			<select name="<?php echo $tpl->field_name; ?>" id="<?php echo $tpl->field_id; ?>" class="widefat">
-			<?php foreach ( $tpl->taxonomies as $taxonomy ) : ?>
-				<option value="<?php echo $taxonomy->name; ?>" <?php echo selected( $tpl->field , $taxonomy->name , FALSE ); ?>><?php echo $taxonomy->labels->singular_name; ?></option>
-			<?php endforeach; ?>
-			</select>
-		<?php
 	}
 
 	public function _parse_terms( $which , $source , $target , $delete_cache = FALSE , $limit = 0 )
