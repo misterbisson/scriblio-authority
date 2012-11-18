@@ -12,7 +12,11 @@ class Authority_Posttype {
 	public function __construct()
 	{
 		add_action( 'init' , array( $this, 'register_post_type' ) , 11 );
+
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
+		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
+		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
+
 		add_action( 'wp_ajax_scrib_enforce_authority', array( $this, 'enforce_authority_on_corpus_ajax' ));
 		add_action( 'wp_ajax_scrib_create_authority_records', array( $this, 'create_authority_records_ajax' ));
 		add_filter( 'wp_ajax_scrib_term_report', array( $this, 'term_report_ajax' ) );
@@ -176,26 +180,65 @@ class Authority_Posttype {
 
 	public function template_redirect()
 	{
-		global $wp_query;
+		// get the details about the queried object
+		$queried_object = get_queried_object();
 
-		if( ! ( $wp_query->is_tax || $wp_query->is_tag || $wp_query->is_category ))
-			return;
-
-		// get the details about the queried term
-		$queried_object = $wp_query->get_queried_object();
-
-		// if we have an authority record, possibly redirect
-		if( $authority = $this->get_term_authority( $queried_object ))
+		// is this a request for our post type? redirect to the taxonomy permalink if so
+		if ( 
+			isset( $queried_object->post_type ) && 
+			( $this->post_type_name == $queried_object->post_type )
+		)
 		{
-			// don't attempt to redirect requests for the authoritative term
-			if( $queried_object->term_taxonomy_id == $authority->primary_term->term_taxonomy_id )
-				return;
-
-			// we're on an alias term, redirect
-			wp_redirect( get_term_link( (int) $authority->primary_term->term_id , $authority->primary_term->taxonomy ));
+			wp_redirect( $this->post_link( '' , $queried_object ) );
 			die;
 		}
+
+		// is this a taxonomy request? return if not
+		if( ! isset( $queried_object->term_id ))
+		{			
+			return;
+		}
+
+
+		// check for an authority record, return if none found
+		if( ! $authority = $this->get_term_authority( $queried_object ))
+		{
+			return;
+		}
+
+		// we have an authority record, but
+		// don't attempt to redirect requests for the authoritative term
+		if( $queried_object->term_taxonomy_id == $authority->primary_term->term_taxonomy_id )
+			return;
+
+		// we have an authority record, and
+		// we're on an alias term, redirect
+		wp_redirect( get_term_link( (int) $authority->primary_term->term_id , $authority->primary_term->taxonomy ));
+		die;
+
 	}
+
+	public function post_link( $permalink , $post )
+	{
+		// return early if this isn't a request for our post type
+		if ( $this->post_type_name != $post->post_type )
+		{
+			return $permalink;
+		}
+
+		// get the authoritative term info
+		$authority = (object) $this->get_post_meta( $post->ID );
+
+		// fail early if the primary_term isn't set
+		if( ! isset( $authority->primary_term ))
+		{
+			return $permalink;
+		}
+
+		// return the permalink for the primary term
+		return get_term_link( (int) $authority->primary_term->term_id , $authority->primary_term->taxonomy );
+
+	}//end post_link
 
 	public function parse_terms_from_string( $text )
 	{

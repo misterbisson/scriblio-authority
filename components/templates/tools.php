@@ -9,7 +9,7 @@
 			foreach( authority_record()->supported_taxonomies() as $tax_obj )
 			{
 			?>
-				<li>Download <a href="<?php echo admin_url( 'admin-ajax.php?action=scrib_term_report&taxonomy=' . $tax_obj->name ); ?>"><?php echo strtolower( $tax_obj->label ); ?> CSV</a></li>
+				<li><a href="<?php echo admin_url( 'admin-ajax.php?action=scrib_term_report&taxonomy=' . $tax_obj->name ); ?>">Download <?php echo strtolower( $tax_obj->label ); ?> CSV</a></li>
 			<?php
 			}
 			?>
