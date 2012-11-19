@@ -6,10 +6,10 @@ class Authority_Posttype_Tools extends Authority_Posttype
 	{
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 
-		add_action( 'wp_ajax_scrib_enforce_authority', array( $this, 'enforce_authority_on_corpus_ajax' ));
-		add_action( 'wp_ajax_scrib_create_authority_records', array( $this, 'create_authority_records_ajax' ));
-		add_filter( 'wp_ajax_scrib_term_report', array( $this, 'term_report_ajax' ) );
-		add_filter( 'wp_ajax_scrib_term_suffix_cleaner', array( $this, 'term_suffix_cleaner_ajax' ) );
+		add_action( 'wp_ajax_authority_enforce_authority', array( $this, 'enforce_authority_on_corpus_ajax' ));
+		add_action( 'wp_ajax_authority_create_authority_records', array( $this, 'create_authority_records_ajax' ));
+		add_filter( 'wp_ajax_authority_term_report', array( $this, 'term_report_ajax' ) );
+		add_filter( 'wp_ajax_authority_term_suffix_cleaner', array( $this, 'term_suffix_cleaner_ajax' ) );
 	}
 
 	public function admin_menu()
@@ -24,7 +24,7 @@ class Authority_Posttype_Tools extends Authority_Posttype
 
 	public function enforce_authority_on_corpus_url( $post_id , $posts_per_page = 5 , $paged = 0 )
 	{
-		return admin_url('admin-ajax.php?action=scrib_enforce_authority&authority_post_id='. (int) $post_id .'&posts_per_page='. (int) $posts_per_page .'&paged='. (int) $paged );
+		return admin_url('admin-ajax.php?action=authority_enforce_authority&authority_post_id='. (int) $post_id .'&posts_per_page='. (int) $posts_per_page .'&paged='. (int) $paged );
 
 	}
 
@@ -213,7 +213,7 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 		{
 ?>
 <script type="text/javascript">
-window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_authority_records&old_tax='. $_REQUEST['old_tax'] .'&new_tax='. $_REQUEST['new_tax'] .'&paged='. $result->next_paged .'&posts_per_page='. (int) $_REQUEST['posts_per_page']); ?>";
+window.location = "<?php echo admin_url('admin-ajax.php?action=authority_create_authority_records&old_tax='. $_REQUEST['old_tax'] .'&new_tax='. $_REQUEST['new_tax'] .'&paged='. $result->next_paged .'&posts_per_page='. (int) $_REQUEST['posts_per_page']); ?>";
 </script>
 <?php
 		}
@@ -278,7 +278,7 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=scrib_create_auth
 
 	public function term_report_ajax()
 	{
-		// example URL: https://site.org/wp-admin/admin-ajax.php?action=scrib_term_report&taxonomy=post_tag
+		// example URL: https://site.org/wp-admin/admin-ajax.php?action=authority_term_report&taxonomy=post_tag
 
 		if( ! current_user_can( 'edit_posts' ))
 			return;

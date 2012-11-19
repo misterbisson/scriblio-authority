@@ -18,7 +18,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		add_filter( 'manage_{$this->post_type_name}_posts_columns' , array( $this, 'columns' ) , 11 );
 		add_filter( 'manage_posts_columns' , array( $this, 'columns' ) , 11 );
 
-		add_filter( 'wp_ajax_scrib_authority_results', array( $this, 'authority_results' ) );
+		add_filter( 'wp_ajax_authority_admin_suggest', array( $this, 'admin_suggest_ajax' ) );
 	}
 
 	public function enqueue_scripts()
@@ -310,63 +310,23 @@ class Authority_Posttype_Admin extends Authority_Posttype
 <?php
 	}
 
-	public function metab_coincidence( $post )
+	public function metab_coincidences( $post )
 	{
-		global $wpdb;
+		$coincidences = array_slice( (array) $this->get_related_terms_for_authority( $post->ID ) , 0 , 37 );
+?>
+		<p>In addition to the terms entered above, <?php echo '<a href="'. get_term_link( $this->instance['primary_term'] ) .'" target="_blank">'. $this->instance['primary_term']->name .'</a>'; ?> is frequently used with the following terms:</p>
+<?php
 
-		$search_ttids = array();
-		if( isset( $this->instance['primary_term']->term_taxonomy_id ) )
+		foreach( $coincidences as $k => $v )
 		{
-			$search_ttids[] = (int) $this->instance['primary_term']->term_taxonomy_id;
+			$coincidences[ $k ]->link = get_term_link( $v );
 		}
-
-		if( isset( $this->instance['alias_terms'] ) )
-		{
-			foreach( (array) $this->instance['alias_terms'] as $term )
-			{
-				$search_ttids[] = (int) $term->term_taxonomy_id;
-			}
-		}
-
-		$exclude_ttids = $search_ttids;
-		if( isset( $this->instance['parent_terms'] ) )
-		{
-			foreach( (array) $this->instance['parent_terms'] as $term )
-			{
-				$exclude_ttids[] = (int) $term->term_taxonomy_id;
-			}
-		}
-
-		if( isset( $this->instance['child_terms'] ) )
-		{
-			foreach( (array) $this->instance['child_terms'] as $term )
-			{
-				$exclude_ttids[] = (int) $term->term_taxonomy_id;
-			}
-		}
-
-
-		echo '<ul>';
-		foreach( (array) $wpdb->get_results('
-			SELECT t.term_taxonomy_id , COUNT(*) AS hits
-			FROM '. $wpdb->term_relationships .' t
-			JOIN '. $wpdb->term_relationships .' p ON p.object_id = t.object_id
-			WHERE p.term_taxonomy_id IN( '. implode( ',' , $search_ttids ) .' )
-			AND t.term_taxonomy_id NOT IN( '. implode( ',' , $exclude_ttids ) .' )
-			GROUP BY t.term_taxonomy_id
-			ORDER BY hits DESC
-			LIMIT 11
-		') as $ttid )
-		{
-			$term = $this->get_term_by_ttid( $ttid->term_taxonomy_id );
-			echo '<li>'. $term->taxonomy .':'. $term->name .' ('. (int) $ttid->hits .' hits)</li>';
-		}
-		echo '</ul>';
-	}//end metab_enforce
+		echo wp_generate_tag_cloud( $coincidences );
+	}//end metab_coincidences
 
 	public function metab_enforce( $post )
 	{
-		echo '<a href="'. $this->enforce_authority_on_corpus_url( $post->ID ) .'" target="_blank">Enforce this authority on all posts</a>';
+		echo '<a href="'. authority_record()->tools_obj->enforce_authority_on_corpus_url( $post->ID ) .'" target="_blank">Enforce this authority on all posts</a>';
 	}//end metab_enforce
 
 	public function metaboxes()
@@ -375,7 +335,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		add_meta_box( 'scrib-authority-primary' , 'Primary Term' , array( $this , 'metab_primary_term' ) , $this->post_type_name , 'normal', 'high' );
 		add_meta_box( 'scrib-authority-alias' , 'Alias Terms' , array( $this , 'metab_alias_terms' ) , $this->post_type_name , 'normal', 'high' );
 		add_meta_box( 'scrib-authority-family' , 'Family Terms' , array( $this , 'metab_family_terms' ) , $this->post_type_name , 'normal', 'high' );
-		add_meta_box( 'scrib-authority-coincidence' , 'Related Term Clusters' , array( $this , 'metab_coincidence' ) , $this->post_type_name , 'normal', 'low' );
+		add_meta_box( 'scrib-authority-coincidences' , 'Related Term Clusters' , array( $this , 'metab_coincidences' ) , $this->post_type_name , 'normal', 'low' );
 		add_meta_box( 'scrib-authority-enforce' , 'Enforce' , array( $this , 'metab_enforce' ) , $this->post_type_name , 'normal', 'low' );
 
 		// @TODO: need metaboxes for links and arbitrary values (ticker symbol, etc)
@@ -557,7 +517,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		return $columns;
   	}
 
-	public function authority_results()
+	public function admin_suggest_ajax()
 	{
 		$s = trim( $_GET['s'] );
 		$suggestions = $this->suggestions( $s );
@@ -565,7 +525,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		header('Content-Type: application/json');
 		echo json_encode( $suggestions );
 		die;
-	}//end authority_results
+	}//end admin_suggest_ajax
 
 	public function suggestions( $s = '' , $_taxonomy = array() )
 	{
