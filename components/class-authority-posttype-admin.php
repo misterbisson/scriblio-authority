@@ -61,8 +61,13 @@ class Authority_Posttype_Admin extends Authority_Posttype
 					continue;
 				}
 
+				// this is part of an workaround for terms with . in them
+				$found = FALSE;
+
+				// split the taxonomies and terms apart
 				$parts = array_map( 'trim' , (array) explode( ':' , $blobette ));
 
+				// allow a sloppy tag taxonomy
 				if( 'tag' == $parts[0] ) // parts[0] is the taxonomy
 					$parts[0] = 'post_tag';
 
@@ -70,12 +75,26 @@ class Authority_Posttype_Admin extends Authority_Posttype
 				if( $term = get_term_by( 'slug' , $parts[1] , $parts[0] ))
 				{
 					$terms[] = $term;
+					$found = TRUE;
 				}
-				else
+
+				// test again for the term without the .
+				// this is an ugly hack for a problem with matching terms with . in them
+				// problem is twofold: old sanitization rules stripped . , rather than replacing it with - , as they do now
+				// and terms are being submitted as names, rather than slugs or IDs
+				if( 
+					preg_match( '/\./' , $parts[1] ) &&
+					( $term = get_term_by( 'slug' , preg_replace( '/\./' , '' , $parts[1] ) , $parts[0] )))
+				{
+					$terms[] = $term;
+					$found = TRUE;
+				}
+
+				// as a last resort, create a new term
+				if( ! $found )
 				{
 					// Ack! It's impossible to associate an existing term with a new taxonomy!
 					// wp_insert_term() will always generate a new term with an ugly slug
-					// but wp_set_object_terms() does not behave that way when it encounters an existing term in a new taxonomy
 
 					// insert the new term
 					if(( $_new_term = wp_insert_term( $parts[1] , $parts[0] )) && is_array( $_new_term ))

@@ -157,6 +157,12 @@ class Authority_Posttype {
 			return $permalink;
 		}
 
+		// test if this is a valid term
+		if( ! get_term( $authority->primary_term->term_id , $authority->primary_term->taxonomy ) )
+		{
+			return $permalink;
+		}
+
 		// return the permalink for the primary term
 		return get_term_link( (int) $authority->primary_term->term_id , $authority->primary_term->taxonomy );
 
