@@ -1,6 +1,7 @@
 <?php
 class Authority_Posttype {
 
+	public $version = 7;
 	public $id_base = 'scrib-authority';
 	public $post_type_name = 'scrib-authority';
 	public $tools_page_id = 'scrib-authority-tools';
@@ -30,39 +31,6 @@ class Authority_Posttype {
 			require_once dirname( __FILE__ ) . '/class-authority-posttype-tools.php';
 			$this->tools_obj = new Authority_Posttype_Tools;
 		}
-	}
-
-	// WP has no convenient method to delete a single term from an object, but this is what's used in wp-includes/taxonomy.php
-	public function delete_terms_from_object_id( $object_id , $delete_terms )
-	{
-		global $wpdb;
-		$in_delete_terms = "'". implode( "', '", $delete_terms ) ."'";
-		do_action( 'delete_term_relationships', $object_id, $delete_terms );
-		$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->term_relationships WHERE object_id = %d AND term_taxonomy_id IN ( $in_delete_terms )" , $object_id ));
-		do_action( 'deleted_term_relationships', $object_id, $delete_terms );
-		wp_update_term_count( $delete_terms , $taxonomy_info->name );
-
-		update_post_cache( get_post( $object_id ));
-
-		return;
-	}
-
-	// I'm pretty sure the only reason why terms aren't fetchable by TTID has to do with the history of WPMU and sitewide terms.
-	// In this case, we need a UI that accepts terms from multiple taxonomies, so we use the TTID to represent the term in the form element,
-	// and we need this function to translate those TTIDs into real terms for storage when the form is submitted.
-	public function get_term_by_ttid( $tt_id )
-	{
-		global $wpdb;
-
-		$term_id_and_tax = $wpdb->get_row( $wpdb->prepare( "SELECT term_id , taxonomy FROM $wpdb->term_taxonomy WHERE term_taxonomy_id = %d LIMIT 1" , $tt_id ) , OBJECT );
-
-		if( ! $term_id_and_tax )
-		{
-			$error = new WP_Error( 'invalid_ttid' , 'Invalid term taxonomy ID' );
-			return $error;
-		}
-
-		return get_term( (int) $term_id_and_tax->term_id , $term_id_and_tax->taxonomy );
 	}
 
 	public function delete_term_authority_cache( $term )
@@ -194,29 +162,44 @@ class Authority_Posttype {
 
 	}//end post_link
 
-	/**
-	 * Check if an authority record has an alias.
-	 *
-	 * @param $term_authority The term authority record to check, as return by get_term_authority()
-	 * @param $alias_term The alias term to check
-	 * @return boolean
-	 */
-	public function authority_has_alias( $term_authority, $alias_term )
+	public function add_taxonomy( $taxonomy )
 	{
-		if( ! is_array( $term_authority->alias_terms ) )
-		{
-			return false;
-		}
+		$this->taxonomies[ $taxonomy ] = $taxonomy;
+	}
 
-		foreach( $term_authority->alias_terms as $term )
+	public function supported_taxonomies( $support = null )
+	{
+		if ( $support )
 		{
-			if( $term->term_id == $alias_term->term_id )
+			$this->taxonomy_objects = get_taxonomies( array( 'public' => true ), 'objects' );
+
+			$purge = array_diff( array_keys( $this->taxonomy_objects ), $support );
+
+			foreach( $purge as $remove )
 			{
-				return true;
-			}
-		}
+				unset( $this->taxonomy_objects[ $remove ] );
+			}//end foreach
 
-		return false;
+			// sort taxonomies by the singular name
+			uasort( $this->taxonomy_objects, array( $this , '_sort_taxonomies' ));
+		}//end if
+
+		return $this->taxonomy_objects;
+	}//end supported_taxonomies
+
+	public function _sort_taxonomies( $a , $b )
+	{
+		if ( $a->labels->singular_name == $b->labels->singular_name )
+		{
+			return 0;
+		}//end if
+
+		if ( 'post_tag' == $b->name  )
+		{
+			return -1;
+		}//end if
+
+		return $a->labels->singular_name < $b->labels->singular_name ? -1 : 1;
 	}
 
 	public function get_post_meta( $post_id )
@@ -306,46 +289,6 @@ class Authority_Posttype {
 		// update the term relationships for this post (add the primary and alias terms)
 		foreach( (array) $object_terms as $k => $v )
 			wp_set_object_terms( $post_id , $v , $k , FALSE );
-	}
-
-	public function add_taxonomy( $taxonomy )
-	{
-		$this->taxonomies[ $taxonomy ] = $taxonomy;
-	}
-
-	public function supported_taxonomies( $support = null )
-	{
-		if ( $support )
-		{
-			$this->taxonomy_objects = get_taxonomies( array( 'public' => true ), 'objects' );
-
-			$purge = array_diff( array_keys( $this->taxonomy_objects ), $support );
-
-			foreach( $purge as $remove )
-			{
-				unset( $this->taxonomy_objects[ $remove ] );
-			}//end foreach
-
-			// sort taxonomies by the singular name
-			uasort( $this->taxonomy_objects, array( $this , '_sort_taxonomies' ));
-		}//end if
-
-		return $this->taxonomy_objects;
-	}//end supported_taxonomies
-
-	public function _sort_taxonomies( $a , $b )
-	{
-		if ( $a->labels->singular_name == $b->labels->singular_name )
-		{
-			return 0;
-		}//end if
-
-		if ( 'post_tag' == $b->name  )
-		{
-			return -1;
-		}//end if
-
-		return $a->labels->singular_name < $b->labels->singular_name ? -1 : 1;
 	}
 
 	public function register_post_type()
@@ -438,6 +381,39 @@ class Authority_Posttype {
 			update_post_cache( $post );
 
 		}
+	}
+
+	// WP has no convenient method to delete a single term from an object, but this is what's used in wp-includes/taxonomy.php
+	public function delete_terms_from_object_id( $object_id , $delete_terms )
+	{
+		global $wpdb;
+		$in_delete_terms = "'". implode( "', '", $delete_terms ) ."'";
+		do_action( 'delete_term_relationships', $object_id, $delete_terms );
+		$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->term_relationships WHERE object_id = %d AND term_taxonomy_id IN ( $in_delete_terms )" , $object_id ));
+		do_action( 'deleted_term_relationships', $object_id, $delete_terms );
+		wp_update_term_count( $delete_terms , $taxonomy_info->name );
+
+		update_post_cache( get_post( $object_id ));
+
+		return;
+	}
+
+	// I'm pretty sure the only reason why terms aren't fetchable by TTID has to do with the history of WPMU and sitewide terms.
+	// In this case, we need a UI that accepts terms from multiple taxonomies, so we use the TTID to represent the term in the form element,
+	// and we need this function to translate those TTIDs into real terms for storage when the form is submitted.
+	public function get_term_by_ttid( $tt_id )
+	{
+		global $wpdb;
+
+		$term_id_and_tax = $wpdb->get_row( $wpdb->prepare( "SELECT term_id , taxonomy FROM $wpdb->term_taxonomy WHERE term_taxonomy_id = %d LIMIT 1" , $tt_id ) , OBJECT );
+
+		if( ! $term_id_and_tax )
+		{
+			$error = new WP_Error( 'invalid_ttid' , 'Invalid term taxonomy ID' );
+			return $error;
+		}
+
+		return get_term( (int) $term_id_and_tax->term_id , $term_id_and_tax->taxonomy );
 	}
 
 	public function get_ttids_in_authority( $post_id )
@@ -567,7 +543,7 @@ class Authority_Posttype {
 			}
 		}
 
-		if( isset( $exclude_ttids ))
+		if( ! empty( $exclude_ttids ))
 		{
 			$output_terms = array_diff_key( $output_terms , $exclude_ttids ); 
 		}
@@ -583,5 +559,4 @@ class Authority_Posttype {
 		// reverse compare so items with higher counts are at the top of the array
 		return $a->count > $b->count ? -1 : 1;
 	}
-
 }//end Authority_Posttype class

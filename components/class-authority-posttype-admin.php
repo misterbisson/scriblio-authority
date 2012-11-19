@@ -23,9 +23,9 @@ class Authority_Posttype_Admin extends Authority_Posttype
 
 	public function enqueue_scripts()
 	{
-		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , '3' );
-		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , '3' , TRUE );
-		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , '1' , TRUE );
+		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , $this->version );
+		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , $this->version , TRUE );
+		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
 
 		wp_enqueue_style( 'scrib-authority' );
 		wp_enqueue_script( 'scrib-authority' );
@@ -312,6 +312,12 @@ class Authority_Posttype_Admin extends Authority_Posttype
 
 	public function metab_coincidences( $post )
 	{
+		// sanity check
+		if( ! isset( $this->instance['primary_term']->name ))
+		{
+			return FALSE;
+		}
+
 		$coincidences = array_slice( (array) $this->get_related_terms_for_authority( $post->ID ) , 0 , 37 );
 ?>
 		<p>In addition to the terms entered above, <?php echo '<a href="'. get_term_link( $this->instance['primary_term'] ) .'" target="_blank">'. $this->instance['primary_term']->name .'</a>'; ?> is frequently used with the following terms:</p>
@@ -529,7 +535,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 
 	public function suggestions( $s = '' , $_taxonomy = array() )
 	{
-		$cache_id = 'scrib_authority_suggestions';
+		$cache_id = 'authority_suggestions';
 
 		// get and validate the search string
 		$s = trim( $s );
@@ -570,17 +576,12 @@ class Authority_Posttype_Admin extends Authority_Posttype
 			global $wpdb;
 
 			// init the result vars
-
 			$suggestions = array();
 
-			// get the matching terms
+			// sql to get the matching terms
 			$sql = "
 				SELECT
-					t.term_id,
-					t.name,
-					t.slug,
-					tt.taxonomy,
-					tt.count,
+					tt.term_taxonomy_id,
 					( ( 100 - t.len ) * tt.count ) AS hits
 				FROM
 					(
@@ -598,27 +599,39 @@ class Authority_Posttype_Admin extends Authority_Posttype
 						LIMIT 100
 					) t
 				JOIN {$wpdb->term_taxonomy} AS tt
-					ON tt.term_id = t.term_id
-				 AND tt.taxonomy IN ('" . implode( "','", $taxonomy ). "')
+					ON tt.term_id = t.term_id 
+					AND tt.taxonomy IN ('" . implode( "','", $taxonomy ). "')
 				ORDER BY
 					hits DESC
 				LIMIT 25;
 			";
 
-			$terms = $wpdb->get_results(
+			// execute the query
+			$search_string = sanitize_title_with_dashes( $s );
+			$ttids = $wpdb->get_results(
 				$wpdb->prepare(
 					$sql,
-					sanitize_title( $s ) . '%'
+					$search_string . '%'
 				)
 			);
 
-			// create suggestions for the matched taxonomies
+			// process the TT IDs into actual terms
+			foreach( (array) $ttids as $ttid )
+			{
+				$terms[ $ttid->term_taxonomy_id ] = $this->get_term_by_ttid( $ttid->term_taxonomy_id );
+				$terms[ $ttid->term_taxonomy_id ]->count = $ttid->hits;
+			}
+
+			// filter the terms through the authorities
+			$terms = $this->filter_terms_by_authority( $terms );
+
+			// create suggestions for the matched terms
 			foreach( (array) $terms as $term )
 			{
 				$tax = get_taxonomy( $term->taxonomy );
 				$suggestion = array(
 					'taxonomy' => $this->simplify_taxonomy_for_json( $tax ),
-					'term' => $term->name,
+					'term' => $term->name . (( isset( $term->authority_synonyms ) && ! preg_match( '/^'. $search_string .'/', $term->slug ) ) ? ' (matched for "'. current( $term->authority_synonyms )->name .'")' : '' ),
 					'data' => array(),
 				);
 
@@ -627,7 +640,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 				$suggestions[] = $suggestion;
 			}//end foreach
 
-			wp_cache_set( $cache_key , $suggestions , $cache_id , 12600 );
+			wp_cache_set( $cache_key , $suggestions , $cache_id , 300 );
 		}//end if
 
 		return $suggestions;
