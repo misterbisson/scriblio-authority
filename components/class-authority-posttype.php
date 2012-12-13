@@ -1,6 +1,7 @@
 <?php
 class Authority_Posttype {
 
+	public $admin_obj = null;
 	public $version = 7;
 	public $id_base = 'scrib-authority';
 	public $post_type_name = 'scrib-authority';
