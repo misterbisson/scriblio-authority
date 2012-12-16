@@ -416,7 +416,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 			return;
 
 		// get and check the post
-		$post = get_post( $object_id );
+		$post = get_post( $post_id );
 
 		// only work on authority posts
 		if( ! isset( $post->post_type ) || $this->post_type_name != $post->post_type )

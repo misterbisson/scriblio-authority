@@ -340,7 +340,7 @@ class Authority_Posttype {
 	public function enforce_authority_on_object( $object_id )
 	{
 		// don't run on post revisions (almost always happens just before the real post is saved)
-		if( wp_is_post_revision( $post_id ))
+		if( wp_is_post_revision( $object_id ) )
 			return;
 
 		if( ! $object_id )
