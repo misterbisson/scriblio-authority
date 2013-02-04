@@ -412,22 +412,23 @@ class Authority_Posttype_Admin extends Authority_Posttype
 			return;
 
 		// don't run on post revisions (almost always happens just before the real post is saved)
-		if( wp_is_post_revision( $post_id ))
+		if ( wp_is_post_revision( $post_id ) )
 			return;
 
 		// get and check the post
-		$post = get_post( $object_id );
+		if ( isset( $object_id ) )
+			$post = get_post( $object_id );
 
 		// only work on authority posts
-		if( ! isset( $post->post_type ) || $this->post_type_name != $post->post_type )
+		if ( ! isset( $post->post_type ) || $this->post_type_name != $post->post_type )
 			return;
 
 		// check the nonce
-		if( ! $this->verify_nonce() )
+		if ( ! $this->verify_nonce() )
 			return;
 
 		// check the permissions
-		if( ! current_user_can( 'edit_post' , $post_id ))
+		if ( ! current_user_can( 'edit_post' , $post_id ))
 			return;
 
 		// get the old data
