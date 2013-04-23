@@ -120,7 +120,7 @@ class Authority_EasyTerms
 			return;
 
 		// check that this isn't an autosave
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
 			return;
 
 		// don't run on post revisions (almost always happens just before the real post is saved)
@@ -152,7 +152,7 @@ class Authority_EasyTerms
 
 		$taxonomy = $this->shortcodes[ $tag ];
 
-		$term_str = wp_filter_nohtml_kses( $content );
+		$term_str = wp_kses( $content, array() );
 		$term_obj = get_term_by( 'name' , $wpdb->escape( $term_str ) , $taxonomy );
 
 		$term_str = apply_filters( 'easytags_term', $term_str , $term_obj );
