@@ -340,17 +340,17 @@ class Authority_Posttype {
 	public function enforce_authority_on_object( $object_id )
 	{
 		// don't run on post revisions (almost always happens just before the real post is saved)
-		if( wp_is_post_revision( $object_id ) )
+		if ( wp_is_post_revision( $object_id ) )
 			return;
 
-		if( ! $object_id )
+		if ( ! $object_id )
 			return;
 
 		// get and check the post
 		$post = get_post( $object_id );
 
 		// don't mess with authority posts
-		if( ! isset( $post->post_type ) || $this->post_type_name == $post->post_type )
+		if ( ! isset( $post->post_type ) || $this->post_type_name == $post->post_type )
 			return;
 
 		// get the terms to work with
@@ -361,7 +361,7 @@ class Authority_Posttype {
 		$new_object_terms = $terms_to_delete = array();
 		foreach( $terms as $term )
 		{
-			if( $authority = $this->get_term_authority( $term ))
+			if ( $authority = $this->get_term_authority( $term ))
 			{
 				// add the preferred term to list of terms to add to the object
 				$new_object_terms[ $authority->primary_term->taxonomy ][] = (int) $authority->primary_term->term_id;
@@ -374,11 +374,11 @@ class Authority_Posttype {
 		}
 
 		// remove the alias terms that are not in primary taxonomy
-		if( count( $delete_terms ))
+		if ( count( $delete_terms ))
 			$this->delete_terms_from_object_id( $object_id , $delete_terms );
 
 		// add the alias and parent terms to the object
-		if( count( $new_object_terms ))
+		if ( count( $new_object_terms ))
 		{
 			foreach( (array) $new_object_terms as $k => $v )
 			{
@@ -528,13 +528,13 @@ class Authority_Posttype {
 					$output_terms[ $authority->primary_term->term_taxonomy_id ] = $authority->primary_term;
 
 					// override the count with that from the input terms for more accurate sorting
-					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = $input_term->count;				
+					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = $input_term->count;
 				}
 				else
 				{
 					// take the highest count value
 					// note: summing the counts leads to lies, results in double-counts and worse
-					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = max( $input_term->count , $output_terms[ $authority->primary_term->term_taxonomy_id ]->count );				
+					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = max( $input_term->count , $output_terms[ $authority->primary_term->term_taxonomy_id ]->count );
 				}
 
 				// save the non-authoritative input term as an element inside this term
@@ -552,7 +552,7 @@ class Authority_Posttype {
 
 		if( ! empty( $exclude_ttids ))
 		{
-			$output_terms = array_diff_key( $output_terms , $exclude_ttids ); 
+			$output_terms = array_diff_key( $output_terms , $exclude_ttids );
 		}
 
 		// sort the new term array
