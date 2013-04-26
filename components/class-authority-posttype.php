@@ -31,6 +31,8 @@ class Authority_Posttype {
 
 			require_once dirname( __FILE__ ) . '/class-authority-posttype-tools.php';
 			$this->tools_obj = new Authority_Posttype_Tools;
+
+			add_filter( 'wp_import_post_meta', array( $this, 'wp_import_post_meta' ), 10, 3 );
 		}
 	}
 
@@ -212,14 +214,22 @@ class Authority_Posttype {
 	public function get_post_meta( $post_id )
 	{
 		$this->instance = get_post_meta( $post_id , $this->post_meta_key , TRUE );
+
+		if ( ! is_wp_error( $this->instance ) && isset( $this->instance->primary_term ) )
+		{
+			$this->instance->primary_term = $this->sanitize_term( $this->instance->primary_term );
+		}//end if
+
 		return $this->instance;
 	}
 
-	public function update_post_meta( $post_id , $meta_array )
+	public function update_post_meta( $post_id, $meta_array )
 	{
 		// make sure meta is added to the post, not a revision
-		if ( $_post_id = wp_is_post_revision( $post_id ))
+		if ( $_post_id = wp_is_post_revision( $post_id ) )
+		{
 			$post_id = $_post_id;
+		}//end if
 
 		// the terms we'll set on this object
 		$object_terms = array();
@@ -227,15 +237,18 @@ class Authority_Posttype {
 		if( is_object( $meta_array ) )
 		{
 			$meta = (array) $meta_array;
-		}
+		}//end if
 		else
 		{
 			$meta = $meta_array;
-		}
+		}//end else
 
 		// primary (authoritative) taxonomy term
-		if( isset( $meta['primary_term']->term_id ))
+		if( isset( $meta['primary_term']->term_id ) )
 		{
+			// synchronize primary term
+			$meta['primary_term'] = $this->sanitize_term( $meta['primary_term'] );
+
 			$object_terms[ $meta['primary_term']->taxonomy ][] = (int) $meta['primary_term']->term_id;
 
 			// clear the authority cache for this term
@@ -244,7 +257,7 @@ class Authority_Posttype {
 			// updating the post title is a pain in the ass, just look at what happens when we try to save it
 			$post = get_post( $post_id );
 			$post->post_title = $meta['primary_term']->name;
-			if( ! preg_match( '/^'. $meta['primary_term']->slug .'/', $post->post_name ))
+			if( ! preg_match( '/^'. $meta['primary_term']->slug .'/', $post->post_name ) )
 			{
 				// update the title
 				$post->post_name = $meta['primary_term']->slug;
@@ -256,47 +269,178 @@ class Authority_Posttype {
 				// remove the action before attempting to save the post, then reinstate it
 				if( isset( $this->admin_obj ))
 				{
-					remove_action( 'save_post', array( $this->admin_obj , 'save_post' ));
+					remove_action( 'save_post', array( $this->admin_obj, 'save_post' ));
 					wp_insert_post( $post );
-					add_action( 'save_post', array( $this->admin_obj , 'save_post' ));
-				}
+					add_action( 'save_post', array( $this->admin_obj, 'save_post' ));
+				}//end if
 				else
 				{
 					wp_insert_post( $post );
-				}
+				}//end else
 
 				// add back the revision support
 				// but this post type doesn't support revisions
 				// add_post_type_support( $this->post_type_name , 'revisions' );
-			}
-		}
+			}//end if
+		}//end if
 
-		// alias terms
-		$alias_dedupe = array();
-		foreach( (array) $meta['alias_terms'] as $term )
-		{
-			$alias_dedupe[ (int) $term->term_taxonomy_id ] = $term;
-		}
-		$meta['alias_terms'] = $alias_dedupe;
-		unset( $alias_dedupe );
+		$term_groups = array(
+			'alias_terms',
+			'parent_terms',
+			'child_terms',
+		);
 
-		foreach( (array) $meta['alias_terms'] as $term )
+		foreach ( $term_groups as $group )
 		{
-				// don't insert the primary term as an alias, that's just silly
+			if ( ! isset( $meta[ $group ] ) )
+			{
+				continue;
+			}//end if
+
+			$dedupe = array();
+			foreach( (array) $meta[ $group ] as $term )
+			{
+				// synchronize term
+				$term = $this->sanitize_term( $term );
+
+				$dedupe[ (int) $term->term_taxonomy_id ] = $term;
+			}//end foreach
+
+			$meta[ $group ] = $dedupe;
+			unset( $dedupe );
+
+			foreach( (array) $meta[ $group ] as $term )
+			{
+				// don't insert the primary term as an alias/child/parent, that's just silly
 				if( $term->term_taxonomy_id == $meta['primary_term']->term_taxonomy_id )
+				{
 					continue;
+				}//end if
 
 				$object_terms[ $term->taxonomy ][] = (int) $term->term_id;
 				$this->delete_term_authority_cache( $term );
-		}
+			}//end foreach
+		}//end foreach
 
 		// save it
-		update_post_meta( $post_id , $this->post_meta_key , $meta );
+		update_post_meta( $post_id, $this->post_meta_key, $meta );
 
 		// update the term relationships for this post (add the primary and alias terms)
-		foreach( (array) $object_terms as $k => $v )
-			wp_set_object_terms( $post_id , $v , $k , FALSE );
-	}
+		foreach( $object_terms as $k => $v )
+		{
+			wp_set_object_terms( $post_id, $v, $k, FALSE );
+		}//end foreach
+	}//end update_post_meta
+
+	/**
+	 * Hook into the WordPress importer to hijack and sanitize scrib-authority term/taxonomy IDs
+	 *
+	 * @param $meta array Post meta
+	 * @param $post_id int Post ID
+	 * @param $post WP_Post Post object
+	 */
+	public function wp_import_post_meta( $meta, $post_id, $post )
+	{
+		$authority_key = null;
+
+		// find the scrib-authority meta data and meta index ($authority_key)
+		foreach ( $meta as $key => $data )
+		{
+			if ( 'scrib-authority' == $data['key'] )
+			{
+				$authority     = maybe_unserialize( $data['value'] );
+				$authority_key = $key;
+			}//end if
+		}//end foreach
+
+		if ( null === $authority_key )
+		{
+			// no scrib-authority data was found. Return the meta data as is
+			return $meta;
+		}//end if
+
+		if (
+			   ! isset( $authority['primary_term'] )
+			&& ! isset( $authority['alias_terms'] )
+			&& ! isset( $authority['child_terms'] )
+			&& ! isset( $authority['parent_terms'] )
+		)
+		{
+			// if there aren't any primary, alias, parent, or child terms, just return the post meta
+			return $meta;
+		}//end if
+
+		// let's insert the authority data on the post.  We're using update_post_meta
+		// because it sanitizes the scrib-authority terms
+		$this->update_post_meta( $post_id, $authority );
+
+		// since the meta has been assigned to the post a la update_post_meta, we can unset
+		// it from the meta array handled by the wordpress importer
+		unset( $meta[ $authority_key ] );
+
+		// return the rest of the meta data
+		return $meta;
+	}//end wp_import_post_meta
+
+	/**
+	 * ensures that authority posts have accurate term/taxonomy ids in the scrib-authority
+	 * meta.  If a term doesn't exist, it is created.
+	 *
+	 * @param $sync Object Term object
+	 */
+	public function sanitize_term( $sync )
+	{
+		// let's try and get a term with the same ID
+		$term = get_term_by( 'id', $sync->term_id, $sync->taxonomy );
+
+		// if the term can be found with an ID and the name/description/slug match, we've found a
+		// match.  Return it.
+		if (
+			   ! is_wp_error( $term )
+			&& $term->slug == $sync->slug
+			&& $term->name == $sync->name
+			&& $term->description == $sync->description
+		)
+		{
+			return $term;
+		}//end if
+
+		$term_args = array(
+			'slug' => $sync->slug,
+			'description' => $sync->description,
+		);
+
+		$override = FALSE;
+
+		// since we couldn't find the term by ID, let's look for it by slug
+		if ( ! ( $term = get_term_by( 'slug', $sync->slug, $sync->taxonomy ) ) )
+		{
+			// the slug wasn't found.  Insert the term.
+			$term     = wp_insert_term( $sync->name, $sync->taxonomy, $term_args );
+			$override = TRUE;
+		}//end if
+		elseif ( $term->name != $sync->name || $term->description != $sync->description )
+		{
+			// the slug was found, but some of the details are different.  Synchronize them
+			$term     = wp_update_term( $term->term_id, $term->taxonomy, $term_args );
+			$override = TRUE;
+		}//end elseif
+
+		if ( $override && ! is_wp_error( $term ) )
+		{
+			// if we get in here, the term was either created or updated and we need
+			// to pull a new object
+			$sync = get_term_by( 'id', $term['term_id'], $sync->taxonomy );
+		}//end if
+		else
+		{
+			$sync = $term;
+		}//end else
+
+		// we return $sync rather than term in the event that we get all the way down here with dirty
+		// data.  We'll keep it dirty (and present) until it can be fixed.
+		return $sync;
+	}//end sanitize_term
 
 	public function register_post_type()
 	{
