@@ -34,7 +34,12 @@
 (function( $ ) {
 	var defaults = {
 		id: null,
-		classes: null
+		classes: null,
+		custom_enabled: true,
+		replace_field: true,
+		labels: {
+			results: 'Results'
+		}
 	};
 
 	var selector = 'scrib-authority-box';
@@ -52,7 +57,7 @@
 				wrapper : '<div class="' + selector + '" />',
 				item    : '<li class="' + selector + '-item" />',
 				items   : '<ul class="' + selector + '-items"></ul>',
-				entry   : '<input type="text" class="' + selector + '-entry" />'
+				entry   : '<input type="' + this.attr('type') + '" class="' + selector + '-entry ' + selector + '-input" />'
 			};
 
 			// initilaize the common selectors that we'll be using
@@ -69,22 +74,38 @@
 			selectors.close     = selectors.item + ' .close';
 
 			var $results = $('<ul class="' + selector +'-results"/>');
-			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-results"><h4>Results</h4><ul></ul></li>') );
-			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><h4>Custom</h4><ul></ul></li>') );
+			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-results"><h4>' + options.labels.results + '</h4><ul></ul></li>') );
+
+			if ( options.custom_support ) {
+				$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><h4>Custom</h4><ul></ul></li>') );
+			}//end if
+
 			$results.find('.' + selector + '-result-category-results ul').append('<li class="' + selector + '-no-results">No results!</li>');
 
 			var $entry_container = $('<div class="' + selector + '-entry-container"/>');
+
 			$entry_container.append( html.entry );
+
+			if ( ! options.replace_field ) {
+				$entry_container.find( selectors.wrapper + '-input' ).removeClass( selectors.entry.substr( 1 ) );
+			}//end if
+
 			$entry_container.append( $results );
 
 			return this.each( function() {
 				var $orig;
 				var $root;
+				var $entry;
 
 				// wrap and hide the original bound element
 				$orig = $( this );
 				$orig.wrap( html.wrapper );
-				$orig.hide();
+
+				if ( options.replace_field ) {
+					$orig.hide();
+				} else {
+					$orig.addClass( selectors.entry.substr( 1 ) );
+				}//end else
 
 				// identify the root element for the Authority UI
 				$root = $orig.closest( selectors.wrapper );
@@ -118,6 +139,17 @@
 				$root.append( $entry_container );
 				$root.append('<div class="' + selector + '-clearfix"/>');
 
+				if ( options.replace_field ) {
+					$entry = $root.find( selectors.entry );
+					for ( var attr, i = 0, attrs = $orig.get(0).attributes, length = attrs.length; i < length; i++ ) {
+						attr = attrs.item( i );
+
+						if ( 'class' !== attr.nodeName && 'id' !== attr.nodeName && 'type' !== attr.nodeName && 'style' !== attr.nodeName ) {
+							$entry.attr( attr.nodeName, attr.nodeValue );
+						}//end if
+					}//end for
+				}//end if
+
 				methods.taxonomies( $(this), options.taxonomies );
 
 				// click event: result item
@@ -149,19 +181,18 @@
 					methods.update_target( $root );
 				});
 
-				// keydown event: entry field
-				$root.on( 'keydown.scrib-authority-box', selectors.entry, function( e ) {
+				$root.on( 'keydown.scrib-authority-box-down', selectors.entry, function( e ) {
 					// the keys that are handled in here: navigation and selection
 					var code = (e.keyCode ? e.keyCode : e.which);
 
-					if( 40 === code ) {
+					if ( 40 === code ) {
 						// if DOWN arrow is pressed
-						var $focused = $root.find( selectors.results + ' .focus' );
+						var $focused = methods.focused_result( $root );
 
-						if( ! $focused.length ) {
+						if ( ! $focused.length ) {
 							$root.find( selectors.results + ' ' + selectors.item + ':first' ).addClass('focus');
 						} else {
-							if ( 0 == $focused.nextAll( selectors.item ).length ) {
+							if ( 0 === $focused.nextAll( selectors.item ).length ) {
 								$focused.closest( selectors.category ).nextAll( selectors.category ).find( selectors.item + ':first' ).addClass('focus');
 							} else {
 								$focused.nextAll( selectors.item ).first().addClass('focus');
@@ -169,14 +200,21 @@
 
 							$focused.removeClass('focus');
 						}//end else
-					} else if( 38 === code ) {
-						// if UP arrow is pressed
-						var $focused = $root.find( selectors.results + ' .focus' );
+					}//end if
+				});
 
-						if( ! $focused.length ) {
+				$root.on( 'keydown.scrib-authority-box-up', selectors.entry, function( e ) {
+					// the keys that are handled in here: navigation and selection
+					var code = (e.keyCode ? e.keyCode : e.which);
+
+					if ( 38 === code ) {
+						// if UP arrow is pressed
+						var $focused = methods.focused_result( $root );
+
+						if ( ! $focused.length ) {
 							$root.find( selectors.results + ' ' + selectors.item + ':last' ).addClass('focus');
 						} else {
-							if ( 0 == $focused.prevAll( selectors.item ).length ) {
+							if ( 0 === $focused.prevAll( selectors.item ).length ) {
 								$focused.closest( selectors.category ).prevAll( selectors.category ).find( selectors.item + ':first' ).addClass('focus');
 							} else {
 								$focused.prevAll( selectors.item ).first().addClass('focus');
@@ -184,16 +222,46 @@
 
 							$focused.removeClass('focus');
 						}//end else
-					} else if( 13 === code ) {
-						// if ENTER is pressed
-						e.preventDefault();
-						$root.find( selectors.results + ' .focus' ).removeClass('focus').click();
-					} else if( 27 === code ) {
+					}//end if
+				});
+
+				// keydown event: entry field
+				$root.on( 'keydown.scrib-authority-box-enter', selectors.entry, function( e ) {
+					// the keys that are handled in here: navigation and selection
+					var code = (e.keyCode ? e.keyCode : e.which);
+
+					if( 13 === code ) {
+						var $focused = methods.focused_result( $root );
+
+						if ( $focused.length && methods.is_results_visible( $root ) ) {
+							// if ENTER is pressed
+							e.preventDefault();
+							$focused.removeClass('focus').click();
+							$root.find( selectors.entry ).val('');
+							methods.hide_results( $root );
+						} else if ( $.trim( $(this).val() ).length ){
+							var val = $.trim( $(this).val() );
+							$orig.val( val );
+
+							$(this).trigger( 'scriblio-authority-enter', {
+								value: val
+							});
+						}//end else
+					}//end if
+				});
+
+				// keydown event: entry field
+				$root.on( 'keydown.scrib-authority-box-esc', selectors.entry, function( e ) {
+					// the keys that are handled in here: navigation and selection
+					var code = (e.keyCode ? e.keyCode : e.which);
+
+					if ( 27 === code ) {
+						var $focused = methods.focused_result( $root );
+
 						// if ESC is pressed
-						$root.find( selectors.results + ' .focus' ).removeClass('focus');
-						$root.find( selectors.entry ).val('');
+						$focused.removeClass('focus');
 						methods.hide_results( $root );
-					}//end else
+					}//end if
 				});
 
 				// keyup event: entry field
@@ -204,7 +272,7 @@
 					if ( 48 <= code || 8 === code || 46 === code ) {
 						// if a valid char is pressed
 						$root.find( selectors.newitem ).find('.term').html( $(this).val() );
-						if( '' === $.trim( $(this).val() ) ) {
+						if( 0 === $.trim( $(this).val() ).length ) {
 							methods.hide_results( $root );
 						} else {
 							if ( timeout_handler ) {
@@ -235,6 +303,14 @@
 			});
 
 			return terms.join(',');
+		},
+		/**
+		 * returns a focused result
+		 *
+		 * @param jQueryObject $root Root element for this UI widget
+		 */
+		focused_result: function( $root ) {
+			return $root.find( selectors.results + ' .focus' );
 		},
 		/**
 		 * generate item HTML based on an object.
@@ -285,7 +361,7 @@
 		 * @param Object data Item definition object
 		 */
 		inject_item: function( $el, container, data ) {
-			var $el = methods.root( $el );
+			$el = methods.root( $el );
 			var $item = methods.generate_item( data );
 
 			if ( 0 !== $el.find( selectors[container] + ' ' + selectors.category ).length ) {
@@ -293,6 +369,14 @@
 			} else {
 				$el.find( selectors[container] ).append( $item );
 			}//end else
+		},
+		/**
+		 * determines if results are visible
+		 *
+		 * @param jQueryObject $root Root element for this UI widget
+		 */
+		is_results_visible: function( $root ) {
+			return $root.find( selectors.results ).hasClass('show');
 		},
 		/**
 		 * inject an item into the 'items' HTML area
@@ -325,7 +409,7 @@
 		 * @param jQueryObject $root Root html element for authority UI
 		 */
 		remove_item: function( $item, $root ) {
-			var items = $root.data( 'items' );
+			var items = $root.data( 'items' ) || [];
 			var new_items = [];
 			var origin = $item.data( 'origin-data' );
 
@@ -392,13 +476,14 @@
 		search: function( $root, $entry ) {
 			var params = {
 				action: 'authority_admin_suggest',
-				s: $entry.val()
+				s: $.trim( $entry.val() )
 			};
 
-			var xhr = $.get(
-				ajaxurl,
-				params
-			);
+			if ( 0 === params.s.length ) {
+				return;
+			}//end if
+
+			var xhr = $.getJSON( scrib_authority_suggest.url, params );
 
 			$.when( xhr ).done( function( data ) {
 				if ( typeof data != 'undefined' ) {
@@ -415,7 +500,7 @@
 		 */
 		select_item: function( $item, $root ) {
 			// get the cached items object from the root element
-			var items = $root.data('items');
+			var items = $root.data('items') || [];
 
 			// add the selected item's object data into the items object
 			$root.data( 'items', items );
@@ -435,11 +520,15 @@
 				$root.find( selectors.items ).append( $item );
 				items.push( $item.data( 'origin-data' ) );
 			}//end else
+
 			$root.find( selectors.entry ).focus();
 
 			if( $root.find( selectors.items ).find( selectors.item ).length === 0 ) {
 				$root.find( selectors.noitems ).show();
 			}//end if
+
+			// advertise that an item has been selected
+			$item.trigger( 'scriblio-authority-item-selected', { item: $item });
 		},
 		/**
 		 * serialize the selected items into an array
@@ -472,7 +561,9 @@
 				$results.find( selectors.noresults ).hide();
 			}//end if
 
-			$results.addClass('show');
+			if ( 0 !== $.trim( $root.find( selectors.entry ).val() ).length ) {
+				$results.addClass('show');
+			}//end if
 		},
 		taxonomies: function( $el, taxonomies ) {
 			var $root = methods.root( $el );

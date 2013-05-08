@@ -27,7 +27,10 @@ License: GPL2
 
 
 // include required components
+require_once dirname( __FILE__ ) . '/components/class-scriblio-authority-suggest.php';
 require_once dirname( __FILE__ ) . '/components/functions.php';
+
+scriblio_authority_suggest();
 
 // Configure the supported taxonomies for authority records
 authority_record()->add_taxonomy( 'post_tag' );

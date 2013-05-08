@@ -196,6 +196,51 @@ class Authority_Posttype {
 		return $this->taxonomy_objects;
 	}//end supported_taxonomies
 
+	/**
+	 * simplified registered taxonomies (for JSON output)
+	 */
+	public function simple_authority_taxonomies()
+	{
+		static $taxonomies = array();
+
+		if ( ! $taxonomies )
+		{
+			$taxonomy_objects = $this->taxonomies;
+			foreach( $taxonomy_objects as $key => $taxonomy ) {
+				if(
+					'category' == $key ||
+					'post_format' == $key
+				) {
+					continue;
+				}//end if
+
+				do_action( 'debug_robot', print_r( $taxonomy, TRUE ) );
+
+				$taxonomy = get_taxonomy( $taxonomy );
+
+				$taxonomies[ $key ] = $this->simplify_taxonomy_for_json( $taxonomy );
+			}//end foreach
+		}//end if
+
+		return $taxonomies;
+	}//end simple_authority_taxonomies
+
+	/**
+	 * simplifies a taxonomy object so that it only includes the elements
+	 * that matter to JSON transporting
+	 */
+	public function simplify_taxonomy_for_json( $taxonomy )
+	{
+		$tax = new StdClass;
+
+		$tax->name = $taxonomy->name;
+		$tax->labels = new StdClass;
+		$tax->labels->name = $taxonomy->labels->name;
+		$tax->labels->singular_name = $taxonomy->labels->singular_name;
+
+		return $tax;
+	}//end simplify_taxonomy_for_json
+
 	public function _sort_taxonomies( $a , $b )
 	{
 		if ( $a->labels->singular_name == $b->labels->singular_name )

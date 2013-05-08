@@ -1,5 +1,5 @@
 .scrib-authority-box,
-.scrib-authority-box .scrib-authority-box-entry {
+.scrib-authority-box .scrib-authority-box-input {
 	font-family: Helvetica, Arial, sans-serif;
 	font-size: 13px;
 }
@@ -28,7 +28,7 @@
 	border-radius: 3px;
 }
 
-.scrib-authority-box .scrib-authority-box-entry {
+.scrib-authority-box .scrib-authority-box-input {
 	border: 0;
 	outline: 0px;
 	padding: 7px 10px 0px;
@@ -148,6 +148,11 @@
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-result-category {
 	max-height: 250px;
 	overflow: auto;
+	position: relative;
+}
+
+.scrib-authority-box .scrib-authority-box-results .scrib-authority-box-result-category ul {
+	margin-left: 0;
 }
 
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-result-category,

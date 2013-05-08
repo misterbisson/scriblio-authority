@@ -17,8 +17,6 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		add_action( 'manage_posts_custom_column', array( $this, 'column' ), 10 , 2 );
 		add_filter( 'manage_{$this->post_type_name}_posts_columns' , array( $this, 'columns' ) , 11 );
 		add_filter( 'manage_posts_columns' , array( $this, 'columns' ) , 11 );
-
-		add_filter( 'wp_ajax_authority_admin_suggest', array( $this, 'admin_suggest_ajax' ) );
 	}
 
 	public function enqueue_scripts()
@@ -31,22 +29,6 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		wp_enqueue_script( 'scrib-authority' );
 		wp_enqueue_script( 'scrib-authority-behavior' );
 	}//end enqueue_scripts
-
-	/**
-	 * simplifies a taxonomy object so that it only includes the elements
-	 * that matter to JSON transporting
-	 */
-	public function simplify_taxonomy_for_json( $taxonomy )
-	{
-		$tax = new StdClass;
-
-		$tax->name = $taxonomy->name;
-		$tax->labels = new StdClass;
-		$tax->labels->name = $taxonomy->labels->name;
-		$tax->labels->singular_name = $taxonomy->labels->singular_name;
-
-		return $tax;
-	}//end simplify_taxonomy_for_json
 
 	public function parse_terms_from_string( $text )
 	{
@@ -134,18 +116,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 
 		$this->instance = $this->get_post_meta( $post->ID );
 
-		$taxonomies = array();
-		$taxonomy_objects = authority_record()->supported_taxonomies();
-		foreach( $taxonomy_objects as $key => $taxonomy ) {
-			if(
-				'category' == $key ||
-				'post_format' == $key
-			) {
-				continue;
-			}//end if
-
-			$taxonomies[ $key ] = $this->simplify_taxonomy_for_json( $taxonomy );
-		}//end foreach
+		$taxonomies = authority_record()->simple_authority_taxonomies();
 
 		$primary_term = array();
 		$json = array();
@@ -204,7 +175,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 				continue;
 			}//end if
 
-			$taxonomies[ $key ] = $this->simplify_taxonomy_for_json( $taxonomy );
+			$taxonomies[ $key ] = authority_record()->simplify_taxonomy_for_json( $taxonomy );
 		}//end foreach
 
 		$aliases = array();
@@ -292,7 +263,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 			$return->data[ $term->term_taxonomy_id ] = "{$term->taxonomy}:{$term->slug}";
 			$tax = get_taxonomy( $term->taxonomy );
 			$return->detail[] = array(
-				'taxonomy' => $this->simplify_taxonomy_for_json( $tax ),
+				'taxonomy' => authority_record()->simplify_taxonomy_for_json( $tax ),
 				'term' => $term->name,
 				'data' => array(
 					'term' => "{$term->taxonomy}:{$term->slug}",
@@ -540,129 +511,5 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		$columns[ $this->id_base .'_child_terms' ] = 'Child Terms';
 
 		return $columns;
-  	}
-
-	public function admin_suggest_ajax()
-	{
-		$s = trim( $_GET['s'] );
-		$suggestions = $this->suggestions( $s );
-
-		header('Content-Type: application/json');
-		echo json_encode( $suggestions );
-		die;
-	}//end admin_suggest_ajax
-
-	public function suggestions( $s = '' , $_taxonomy = array() )
-	{
-		$cache_id = 'authority_suggestions';
-
-		// get and validate the search string
-		$s = trim( $s );
-
-		if ( 0 === strlen( $s ) )
-		{
-			return FALSE; // require 2 chars for matching
-		}//end if
-
-		// identify which taxonomies we're searching
-		if( ! empty( $_taxonomy ) )
-		{
-			if( is_string( $_taxonomy ))
-			{
-				$taxonomy = explode( ',' , $_taxonomy );
-			}//end if
-			else
-			{
-				$taxonomy = $_taxonomy;
-			}//end else
-
-			$taxonomy = array_filter( array_map( 'trim', $taxonomy ) , 'taxonomy_exists' );
-		}//end if
-		else
-		{
-			// @TODO: this used to be configurable in the dashboard.
-			$taxonomy = array_keys( authority_record()->supported_taxonomies() );
-		}//end else
-
-		// generate a key we can use to cache these results
-		$cache_key = md5( $s . implode( $taxonomy ) . (int) empty( $_taxonomy ) );
-
-		// get results from the cache or generate them fresh if necessary
-		$suggestions = wp_cache_get( $cache_key , $cache_id );
-
-		if( ! $suggestions )
-		{
-			global $wpdb;
-
-			// init the result vars
-			$suggestions = array();
-
-			// sql to get the matching terms
-			$sql = "
-				SELECT
-					tt.term_taxonomy_id,
-					( ( 100 - t.len ) * tt.count ) AS hits
-				FROM
-					(
-						SELECT
-							term_id,
-							name,
-							slug,
-							LENGTH(name) AS len
-						FROM
-							{$wpdb->terms}
-						WHERE
-							slug LIKE ( %s )
-						ORDER BY
-							len ASC
-						LIMIT 100
-					) t
-				JOIN {$wpdb->term_taxonomy} AS tt
-					ON tt.term_id = t.term_id 
-					AND tt.taxonomy IN ('" . implode( "','", $taxonomy ). "')
-				ORDER BY
-					hits DESC
-				LIMIT 25;
-			";
-
-			// execute the query
-			$search_string = sanitize_title_with_dashes( $s );
-			$ttids = $wpdb->get_results(
-				$wpdb->prepare(
-					$sql,
-					$search_string . '%'
-				)
-			);
-
-			// process the TT IDs into actual terms
-			foreach( (array) $ttids as $ttid )
-			{
-				$terms[ $ttid->term_taxonomy_id ] = $this->get_term_by_ttid( $ttid->term_taxonomy_id );
-				$terms[ $ttid->term_taxonomy_id ]->count = $ttid->hits;
-			}
-
-			// filter the terms through the authorities
-			$terms = $this->filter_terms_by_authority( $terms );
-
-			// create suggestions for the matched terms
-			foreach( (array) $terms as $term )
-			{
-				$tax = get_taxonomy( $term->taxonomy );
-				$suggestion = array(
-					'taxonomy' => $this->simplify_taxonomy_for_json( $tax ),
-					'term' => $term->name . (( isset( $term->authority_synonyms ) && ! preg_match( '/^'. $search_string .'/', $term->slug ) ) ? ' (matched for "'. current( $term->authority_synonyms )->name .'")' : '' ),
-					'data' => array(),
-				);
-
-				$suggestion['data']['term'] = "{$term->taxonomy}:{$term->slug}";
-
-				$suggestions[] = $suggestion;
-			}//end foreach
-
-			wp_cache_set( $cache_key , $suggestions , $cache_id , 300 );
-		}//end if
-
-		return $suggestions;
-	}//end suggestions
-
+	}
 }//end Authority_Posttype_Admin class
