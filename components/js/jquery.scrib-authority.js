@@ -144,7 +144,7 @@
 					for ( var attr, i = 0, attrs = $orig.get(0).attributes, length = attrs.length; i < length; i++ ) {
 						attr = attrs.item( i );
 
-						if ( 'class' !== attr.nodeName && 'id' !== attr.nodeName && 'type' !== attr.nodeName && 'style' !== attr.nodeName ) {
+						if ( 'name' !== attr.nodeName && 'class' !== attr.nodeName && 'id' !== attr.nodeName && 'type' !== attr.nodeName && 'style' !== attr.nodeName ) {
 							$entry.attr( attr.nodeName, attr.nodeValue );
 						}//end if
 					}//end for
