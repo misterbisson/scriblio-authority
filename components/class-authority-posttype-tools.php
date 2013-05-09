@@ -379,18 +379,29 @@ window.location = "<?php echo admin_url('admin-ajax.php?action=authority_create_
 		// don't bother updating term counts yet, it'll just slow us down and we have so much to do
 		wp_defer_term_counting( TRUE );
 
+		$taxonomies = authority_record()->taxonomies;
+
+		// bail if there aren't any registered taxonomies
+		if ( ! $taxonomies )
+		{
+			echo "There aren't any registered taxonomies to clean.";
+			die;
+		}//end if
+
 		// prepare and execute the query
 		global $wpdb;
 		$query = $wpdb->prepare( "
 			SELECT *
-			FROM(
+			FROM (
 				SELECT *
 				FROM $wpdb->terms
 				WHERE 1=1
 				AND slug REGEXP '-([0-9]*)$'
 				AND name NOT REGEXP '[0-9]$'
 			) as t
-			JOIN $wpdb->term_taxonomy tt ON tt.term_id = t.term_id
+			JOIN $wpdb->term_taxonomy tt
+				ON tt.term_id = t.term_id
+			 AND tt.taxonomy IN ('" . implode( "','", $taxonomies ) . "')
 			ORDER BY t.name, tt.term_taxonomy_id
 		");
 		$terms = $wpdb->get_results( $query );
