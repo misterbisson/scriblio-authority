@@ -154,6 +154,7 @@ class Scriblio_Authority_Suggest
 				);
 
 				$suggestion['data']['term'] = "{$term->taxonomy}:{$term->slug}";
+				$suggestion['data']['slug'] = $term->slug;
 
 				$suggestions[] = $suggestion;
 			}//end foreach
