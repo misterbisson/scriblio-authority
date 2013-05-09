@@ -50,6 +50,14 @@
 
 	var methods = {
 		init: function( params ) {
+
+			// fix the ajax url
+			if ( 'https:' === window.location.protocol ) {
+				scrib_authority_suggest.url = scrib_authority_suggest.url.replace( 'http:', 'https:' );
+			} else {
+				scrib_authority_suggest.url = scrib_authority_suggest.url.replace( 'https:', 'http:' );
+			}//end if
+
 			options = $.extend( defaults, params );
 
 			// set up the html injection variables
@@ -475,7 +483,6 @@
 		},
 		search: function( $root, $entry ) {
 			var params = {
-				action: 'authority_admin_suggest',
 				s: $.trim( $entry.val() )
 			};
 
