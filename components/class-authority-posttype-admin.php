@@ -21,10 +21,6 @@ class Authority_Posttype_Admin extends Authority_Posttype
 
 	public function enqueue_scripts()
 	{
-		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , $this->version );
-		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , $this->version , TRUE );
-		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
-
 		wp_enqueue_style( 'scrib-authority' );
 		wp_enqueue_script( 'scrib-authority' );
 		wp_enqueue_script( 'scrib-authority-behavior' );
