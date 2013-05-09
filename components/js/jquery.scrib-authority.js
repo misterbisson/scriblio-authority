@@ -84,7 +84,7 @@
 			var $results = $('<ul class="' + selector +'-results"/>');
 			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-results"><h4>' + options.labels.results + '</h4><ul></ul></li>') );
 
-			if ( options.custom_support ) {
+			if ( options.custom_enabled ) {
 				$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><h4>Custom</h4><ul></ul></li>') );
 			}//end if
 
