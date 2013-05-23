@@ -143,21 +143,24 @@ class Scriblio_Authority_Suggest
 			// filter the terms through the authorities
 			$terms = authority_record()->filter_terms_by_authority( $terms );
 
-			// create suggestions for the matched terms
-			foreach( (array) $terms as $term )
+			if ( $terms )
 			{
-				$tax = get_taxonomy( $term->taxonomy );
-				$suggestion = array(
-					'taxonomy' => authority_record()->simplify_taxonomy_for_json( $tax ),
-					'term' => $term->name . (( isset( $term->authority_synonyms ) && ! preg_match( '/^'. $search_string .'/', $term->slug ) ) ? ' (matched for "'. current( $term->authority_synonyms )->name .'")' : '' ),
-					'data' => array(),
-				);
+				// create suggestions for the matched terms
+				foreach( (array) $terms as $term )
+				{
+					$tax = get_taxonomy( $term->taxonomy );
+					$suggestion = array(
+						'taxonomy' => authority_record()->simplify_taxonomy_for_json( $tax ),
+						'term' => $term->name . (( isset( $term->authority_synonyms ) && ! preg_match( '/^'. $search_string .'/', $term->slug ) ) ? ' (matched for "'. current( $term->authority_synonyms )->name .'")' : '' ),
+						'data' => array(),
+					);
 
-				$suggestion['data']['term'] = "{$term->taxonomy}:{$term->slug}";
-				$suggestion['data']['slug'] = $term->slug;
+					$suggestion['data']['term'] = "{$term->taxonomy}:{$term->slug}";
+					$suggestion['data']['slug'] = $term->slug;
 
-				$suggestions[] = $suggestion;
-			}//end foreach
+					$suggestions[] = $suggestion;
+				}//end foreach
+			}//end if
 
 			wp_cache_set( $cache_key , $suggestions , $cache_id , 300 );
 		}//end if

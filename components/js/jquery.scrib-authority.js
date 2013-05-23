@@ -1,5 +1,7 @@
 /*!
  * ScribAuthority jQuery plugin
+ * Author: Matthew Batchelder
+ * Author URI: http://borkweb.com
  *
  * USAGE:
  *

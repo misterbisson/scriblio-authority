@@ -232,8 +232,6 @@ class Authority_Posttype {
 					continue;
 				}//end if
 
-				do_action( 'debug_robot', print_r( $taxonomy, TRUE ) );
-
 				$taxonomy = get_taxonomy( $taxonomy );
 
 				$taxonomies[ $key ] = $this->simplify_taxonomy_for_json( $taxonomy );
