@@ -21,6 +21,13 @@
 	{
 	?>
 		<div class="tool-box">
+			<h3 class="title">Enforce Term Authority</h3>
+			<p>This takes a while, but it loops over all authority records and enforces term authority on all posts.</p>
+
+			<p><a href="<?php echo admin_url( 'admin-ajax.php?action=authority_enforce_all_authority' ); ?>" target="_blank">Enforce authority on all authority records</a>
+		</div>
+
+		<div class="tool-box">
 			<h3 class="title">Advanced: Clean numeric term slug suffixes</h3>
 			<p>Warning: don't attempt this unless you've read the code and know exactly what it does.</p>
 

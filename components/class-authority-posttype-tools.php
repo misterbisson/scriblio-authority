@@ -7,6 +7,7 @@ class Authority_Posttype_Tools extends Authority_Posttype
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 
 		add_action( 'wp_ajax_authority_enforce_authority', array( $this, 'enforce_authority_on_corpus_ajax' ));
+		add_action( 'wp_ajax_authority_enforce_all_authority', array( $this, 'wp_ajax_authority_enforce_all_authority' ));
 		add_action( 'wp_ajax_authority_create_authority_records', array( $this, 'create_authority_records_ajax' ));
 		add_filter( 'wp_ajax_authority_term_report', array( $this, 'term_report_ajax' ) );
 		add_filter( 'wp_ajax_authority_term_suffix_cleaner', array( $this, 'term_suffix_cleaner_ajax' ) );
@@ -22,10 +23,77 @@ class Authority_Posttype_Tools extends Authority_Posttype
 		include_once __DIR__ . '/templates/tools.php';
 	}
 
+	public function enforce_all_authority_url( $post_id, $authority_page = 0, $posts_per_page = 5, $page_num = 0 )
+	{
+		return admin_url('admin-ajax.php?action=authority_enforce_all_authority&authority_post_id='. (int) $post_id .'&authority_page=' . (int) $authority_page . '&posts_per_page='. (int) $posts_per_page .'&page_num='. (int) $page_num );
+	}//end enforce_all_authority_url
+
+	public function wp_ajax_authority_enforce_all_authority()
+	{
+		$post_id        = (int) $_REQUEST['authority_post_id'];
+		$posts_per_page = is_numeric( $_REQUEST['posts_per_page'] ) ? (int) $_REQUEST['posts_per_page'] : 50;
+		$page_num       = is_numeric( $_REQUEST['page_num'] ) ? (int) $_REQUEST['page_num'] : 0;
+		$authority_page = is_numeric( $_REQUEST['authority_page'] ) ? (int) $_REQUEST['authority_page'] : 0;
+
+		// if a post isn't specified, grab one
+		if ( ! $post_id )
+		{
+			$args = array(
+				'posts_per_page' => 1,
+				'paged'          => $authority_page,
+				'post_type'      => $this->post_type_name,
+				'post_status'    => 'publish',
+				'order'          => 'DESC',
+				'orderby'        => 'ID',
+			);
+
+			$query = new WP_Query( $args );
+
+			if ( $query->have_posts() )
+			{
+				$query->the_post();
+
+				$post_id = $query->post->ID;
+			}//end if
+
+			// if we can't get a new authority record, that means we're done
+			if ( ! $post_id )
+			{
+				echo 'Complete!';
+				die;
+			}//end if
+		}//end if
+
+		if( $post_id && $this->get_post_meta( $post_id ) )
+		{
+			echo "<h2>Enforcing Authority on ID {$post_id} &mdash; Page {$page_num}</h2>";
+			$result = $this->enforce_authority_on_corpus( $post_id, $posts_per_page, $page_num );
+		}//end if
+
+		// are we done with enforcing a single authority record?
+		if ( ! is_object( $result ) || ! $result->next_paged )
+		{
+			// clear out the authority post ID to force a new authority post fetch
+			$post_id = 0;
+			$authority_page++;
+		}//end if
+		elseif ( is_object( $result ) )
+		{
+			echo "<p>Processed {$result->processed_count} record(s)</p>";
+			echo '<code>' . print_r( $result->post_ids, TRUE ) . '</code>';
+		}//end else
+?>
+<script>
+window.location = "<?php echo $this->enforce_all_authority_url( $post_id, $authority_page, $posts_per_page, $result->next_paged ); ?>";
+</script>
+<?php
+
+		die;
+	}//end wp_ajax_authority_enforce_all_authority
+
 	public function enforce_authority_on_corpus_url( $post_id , $posts_per_page = 5 , $paged = 0 )
 	{
 		return admin_url('admin-ajax.php?action=authority_enforce_authority&authority_post_id='. (int) $post_id .'&posts_per_page='. (int) $posts_per_page .'&paged='. (int) $paged );
-
 	}
 
 	public function enforce_authority_on_corpus_ajax()
@@ -39,7 +107,7 @@ class Authority_Posttype_Tools extends Authority_Posttype
 
 		print_r( $result );
 
-		if( $result->next_paged )
+		if( is_object( $result ) && $result->next_paged )
 		{
 ?>
 <script type="text/javascript">
@@ -63,24 +131,28 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 		$add_terms[ $authority['primary_term']->taxonomy ][] = (int) $authority['primary_term']->term_id;
 
 		// add parent terms to all posts (yes, they may already be attached to some posts)
-		foreach( (array) $authority['parent_terms'] as $term )
-			$add_terms[ $term->taxonomy ][] = (int) $term->term_id;
-
-
+		if ( isset( $authority['parent_terms'] ) )
+		{
+			foreach( (array) $authority['parent_terms'] as $term )
+				$add_terms[ $term->taxonomy ][] = (int) $term->term_id;
+		}//end if
 
 		// section of terms to delete from each post
 		// create a list of terms to delete from each post
 		$delete_terms = array();
 
 		// delete alias terms that are not in the same taxonomy as the primary term
-		foreach( $authority['alias_terms'] as $term )
+		if ( isset( $authority['alias_terms'] ) )
 		{
-			if( $term->taxonomy != $authority['primary_term']->taxonomy )
+			foreach( $authority['alias_terms'] as $term )
 			{
-				$delete_taxs[ $term->taxonomy ] = $term->taxonomy;
-				$delete_tt_ids[] = (int) $term->term_taxonomy_id;
+				if( $term->taxonomy != $authority['primary_term']->taxonomy )
+				{
+					$delete_taxs[ $term->taxonomy ] = $term->taxonomy;
+					$delete_tt_ids[] = (int) $term->term_taxonomy_id;
+				}
 			}
-		}
+		}//end if
 
 		// Section of terms to search by
 		// create a list of terms to search for posts by
@@ -90,8 +162,11 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 		$search_terms[ $authority['primary_term']->taxonomy ][] = (int) $authority['primary_term']->term_id;
 
 		// add alias terms in the list
-		foreach( $authority['alias_terms'] as $term )
-			$search_terms[ $term->taxonomy ][] = (int) $term->term_id;
+		if ( isset( $authority['alias_terms'] ) )
+		{
+			foreach( $authority['alias_terms'] as $term )
+				$search_terms[ $term->taxonomy ][] = (int) $term->term_id;
+		}//end if
 
 		// get post types, exclude this post type
 		$post_types = get_post_types( array( 'public' => TRUE ));
