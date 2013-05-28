@@ -161,11 +161,10 @@ class Authority_Posttype_Admin extends Authority_Posttype
 	{
 		$taxonomies = array();
 		$taxonomy_objects = authority_record()->supported_taxonomies();
-		foreach( $taxonomy_objects as $key => $taxonomy ) {
-			if(
-				'category' == $key ||
-				'post_format' == $key
-			) {
+		foreach( $taxonomy_objects as $key => $taxonomy )
+		{
+			if( 'post_format' == $key)
+			{
 				continue;
 			}//end if
 
