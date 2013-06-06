@@ -20,7 +20,11 @@ class Authority_Posttype {
 		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
 
 		add_action( 'init' , array( $this, 'register_post_type' ) , 11 );
+		add_action( 'wp_head', array( $this, 'wp_head' ) );
+		add_action( 'rss_head', array( $this, 'rss_head' ) );
+		add_action( 'rss2_head', array( $this, 'rss_head' ) );
 
+		add_filter( 'bloginfo_rss', array( $this, 'bloginfo_rss_filter' ), 10, 2 );
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
@@ -39,6 +43,98 @@ class Authority_Posttype {
 			add_filter( 'wp_import_post_meta', array( $this, 'wp_import_post_meta' ), 10, 3 );
 		}
 	}
+
+	/**
+	 * hooked into the wp_head function
+	 */
+	public function wp_head()
+	{
+		$authority = $this->queried_authority_data();
+
+		if ( $authority && ! is_wp_error( $authority->post ) && ! empty( $authority->post->post_excerpt ) )
+		{
+			echo '<meta name="description" content="' . esc_attr( $authority->post->post_excerpt ) . '">';
+		}//end if
+	}//end wp_head
+
+	/**
+	 * hooked into the rss_head action to insert a thumbnail image if available
+	 */
+	public function rss_head()
+	{
+		$authority = $this->queried_authority_data();
+
+		if ( ! $authority || is_wp_error( $authority->post ) )
+		{
+			return;
+		}//end if
+
+		if ( has_post_thumbnail( $authority->post->ID ) )
+		{
+			$image_url = wp_get_attachment_image_src( get_post_thumbnail_id( $authority->post->ID ), 'thumbnail' );
+			$image_url = $image_url[0];
+
+			$image  = '<image>';
+			$image .= '<url>' . esc_url( $image_url ) . '</url>';
+			$image .= '<title>' . wp_kses( $authority->post->post_title, array() ) . '</title>';
+			$image .= '<link>' . esc_url( get_permalink( $authority->post->ID ) ) . '</link>';
+			$image .= '</image>';
+
+			echo $image;
+
+			unset( $image, $image_url );
+		}//end if
+	}//end rss_head
+
+	/**
+	 * hooked into the bloginfo_rss filter to override the description of the feed based on the term
+	 * authority record
+	 */
+	public function bloginfo_rss_filter( $data, $which )
+	{
+		if ( 'description' != $which )
+		{
+			return $data;
+		}//end if
+
+		$authority = $this->queried_authority_data();
+
+		if ( ! $authority || is_wp_error( $authority->post ) )
+		{
+			return $data;
+		}//end if
+
+		return wp_kses( $authority->post->post_excerpt, array() );
+	}//end bloginfo_rss_filter
+
+	/**
+	 * grab the queried object and determine if it is an authority record. Return authority data
+	 * or FALSE depending on the result
+	 */
+	public function queried_authority_data()
+	{
+		// let's cache the record so we don't make unnecessary queries
+		static $authority = null;
+
+		if ( null !== $authority )
+		{
+			return $authority;
+		}//end if
+
+		$term      = get_queried_object();
+		$authority = $this->get_term_authority( $term );
+
+		if ( ! $authority )
+		{
+			$authority = FALSE;
+
+			return $authority;
+		}//end if
+
+		$authority->post = get_post( $authority->post_id );
+
+		return $authority;
+	}//end queried_authority_data
 
 	public function delete_term_authority_cache( $term )
 	{
