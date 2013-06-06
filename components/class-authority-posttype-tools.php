@@ -98,6 +98,11 @@ window.location = "<?php echo $this->enforce_all_authority_url( $post_id, $autho
 
 	public function enforce_authority_on_corpus_ajax()
 	{
+		if ( ! current_user_can( 'manage_options' ) )
+		{
+			return FALSE;
+		}
+		
 		if( $_REQUEST['authority_post_id'] && $this->get_post_meta( (int) $_REQUEST['authority_post_id'] ))
 			$result = $this->enforce_authority_on_corpus(
 				(int) $_REQUEST['authority_post_id'] ,
@@ -271,6 +276,11 @@ window.location = "<?php echo $this->enforce_authority_on_corpus_url( $_REQUEST[
 
 	public function create_authority_records_ajax()
 	{
+		if ( ! current_user_can( 'manage_options' ) )
+		{
+			return FALSE;
+		}
+		
 		// validate the taxonomies
 		if( ! ( is_taxonomy( $_REQUEST['old_tax'] ) && is_taxonomy( $_REQUEST['new_tax'] )))
 			return FALSE;
