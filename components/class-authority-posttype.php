@@ -26,7 +26,7 @@ class Authority_Posttype {
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
 
-		add_action( 'save_post', array( $this , 'enforce_authority_on_object' ) , 9 );
+		add_action( 'set_object_terms', array( $this , 'enforce_authority_on_object' ) );
 
 		if ( is_admin() )
 		{
@@ -598,13 +598,18 @@ class Authority_Posttype {
 		// add the alias and parent terms to the object
 		if ( count( $new_object_terms ))
 		{
+			// Turn the filter off so we don't infinite loop
+			remove_filter( 'set_object_terms', array( $this , 'enforce_authority_on_object' ) );
+			
 			foreach( (array) $new_object_terms as $k => $v )
 			{
 				wp_set_object_terms( $object_id , $v , $k , TRUE );
 			}
 
-			update_post_cache( $post );
+			// Activate filter again
+			add_action( 'set_object_terms', array( $this , 'enforce_authority_on_object' ) );
 
+			update_post_cache( $post );
 		}
 	}
 
