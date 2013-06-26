@@ -35,6 +35,11 @@ class Authority_Posttype_Tools extends Authority_Posttype
 
 	public function wp_ajax_authority_enforce_all_authority()
 	{
+		if ( ! current_user_can( 'manage_options' ) )
+		{
+			return FALSE;
+		}
+		
 		$post_id        = (int) $_REQUEST['authority_post_id'];
 		$posts_per_page = is_numeric( $_REQUEST['posts_per_page'] ) ? (int) $_REQUEST['posts_per_page'] : 50;
 		$page_num       = is_numeric( $_REQUEST['page_num'] ) ? (int) $_REQUEST['page_num'] : 0;
