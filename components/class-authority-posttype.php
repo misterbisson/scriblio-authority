@@ -25,6 +25,7 @@ class Authority_Posttype {
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
+		add_filter( 'scriblio_facet_taxonony_terms', array( $this, 'scriblio_facet_taxonony_terms' ) );
 
 		add_action( 'set_object_terms', array( $this , 'enforce_authority_on_object' ) );
 
@@ -729,7 +730,7 @@ class Authority_Posttype {
 
 	}//end get_related_terms_for_authority
 
-	public function filter_terms_by_authority( $input_terms , $exclude_ttids = array() )
+	public function filter_terms_by_authority( $input_terms , $exclude_ttids = array(), $honor_input_counts = FALSE )
 	{
 
 		// sanity check
@@ -754,10 +755,14 @@ class Authority_Posttype {
 					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = $input_term->count;
 				}
 				else
-				{
-					// take the highest count value
-					// note: summing the counts leads to lies, results in double-counts and worse
-					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = max( $input_term->count , $output_terms[ $authority->primary_term->term_taxonomy_id ]->count );
+				{			
+					// If this list of terms came from a facet we don't want to override the existing count values
+					if ( ! $honor_input_counts )
+					{
+						// take the highest count value
+						// note: summing the counts leads to lies, results in double-counts and worse
+						$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = max( $input_term->count , $output_terms[ $authority->primary_term->term_taxonomy_id ]->count );
+					} // END if
 				}
 
 				// save the non-authoritative input term as an element inside this term
@@ -770,6 +775,11 @@ class Authority_Posttype {
 			elseif( isset( $input_term->term_id , $input_term->taxonomy , $input_term->term_taxonomy_id , $input_term->count ))
 			{
 				$output_terms[ $input_term->term_taxonomy_id ] = get_term( $input_term->term_id , $input_term->taxonomy );
+				
+				if ( $honor_input_counts )
+				{
+					$output_terms[ $input_term->term_taxonomy_id ]->count = $input_term->count;
+				} // END if
 			}
 		}
 
@@ -789,4 +799,9 @@ class Authority_Posttype {
 		// reverse compare so items with higher counts are at the top of the array
 		return $a->count > $b->count ? -1 : 1;
 	}
+	
+	public function scriblio_facet_taxonony_terms( $terms )
+	{
+		return $this->filter_terms_by_authority( $terms, '', TRUE );
+	} // END scriblio_facet_taxonony_terms
 }//end Authority_Posttype class
