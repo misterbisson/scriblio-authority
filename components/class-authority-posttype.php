@@ -1,7 +1,8 @@
 <?php
 class Authority_Posttype {
 
-	public $admin_obj = null;
+	public $admin_obj = FALSE;
+	public $tools_obj = FALSE;
 	public $version = 7;
 	public $id_base = 'scrib-authority';
 	public $post_type_name = 'scrib-authority';
@@ -34,15 +35,34 @@ class Authority_Posttype {
 
 		if ( is_admin() )
 		{
-			require_once dirname( __FILE__ ) . '/class-authority-posttype-admin.php';
-			$this->admin_obj = new Authority_Posttype_Admin;
-			$this->admin_obj->plugin_url = $this->plugin_url;
-
-			require_once dirname( __FILE__ ) . '/class-authority-posttype-tools.php';
-			$this->tools_obj = new Authority_Posttype_Tools;
+			$this->admin();
+			$this->tools();
 
 			add_filter( 'wp_import_post_meta', array( $this, 'wp_import_post_meta' ), 10, 3 );
 		}
+	}
+
+	public function admin()
+	{
+		if ( ! $this->admin_obj )
+		{
+			require_once __DIR__ . '/class-authority-posttype-admin.php';
+			$this->admin_obj = new Authority_Posttype_Admin;
+			$this->admin_obj->plugin_url = $this->plugin_url;
+		}
+
+		return $this->admin_obj;
+	}
+
+	public function tools()
+	{
+		if ( ! $this->tools_obj )
+		{
+			require_once __DIR__ . '/class-authority-posttype-tools.php';
+			$this->tools_obj = new Authority_Posttype_Tools;
+		}
+
+		return $this->tools_obj;
 	}
 
 	/**
@@ -425,11 +445,11 @@ class Authority_Posttype {
 				// remove_post_type_support(  $this->post_type_name , 'revisions' );
 
 				// remove the action before attempting to save the post, then reinstate it
-				if( isset( $this->admin_obj ))
+				if ( is_admin() )
 				{
-					remove_action( 'save_post', array( $this->admin_obj, 'save_post' ));
+					remove_action( 'save_post', array( $this->admin(), 'save_post' ));
 					wp_insert_post( $post );
-					add_action( 'save_post', array( $this->admin_obj, 'save_post' ));
+					add_action( 'save_post', array( $this->admin(), 'save_post' ));
 				}//end if
 				else
 				{
@@ -648,7 +668,7 @@ class Authority_Posttype {
 	}
 
 	public function enforce_authority_on_object( $object_id )
-	{		
+	{
 		// don't run on post revisions (almost always happens just before the real post is saved)
 		if ( wp_is_post_revision( $object_id ) )
 			return;
@@ -692,7 +712,7 @@ class Authority_Posttype {
 		{
 			// Turn the filter off so we don't infinite loop
 			remove_filter( 'set_object_terms', array( $this , 'enforce_authority_on_object' ) );
-			
+
 			foreach( (array) $new_object_terms as $k => $v )
 			{
 				wp_set_object_terms( $object_id , $v , $k , TRUE );
@@ -846,7 +866,7 @@ class Authority_Posttype {
 					$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = $input_term->count;
 				}
 				else
-				{			
+				{
 					// If this list of terms came from a facet we don't want to override the existing count values
 					if ( ! $honor_input_counts )
 					{
@@ -866,7 +886,7 @@ class Authority_Posttype {
 			elseif( isset( $input_term->term_id , $input_term->taxonomy , $input_term->term_taxonomy_id , $input_term->count ))
 			{
 				$output_terms[ $input_term->term_taxonomy_id ] = get_term( $input_term->term_id , $input_term->taxonomy );
-				
+
 				if ( $honor_input_counts )
 				{
 					$output_terms[ $input_term->term_taxonomy_id ]->count = $input_term->count;
@@ -890,7 +910,7 @@ class Authority_Posttype {
 		// reverse compare so items with higher counts are at the top of the array
 		return $a->count > $b->count ? -1 : 1;
 	}
-	
+
 	public function scriblio_facet_taxonony_terms( $terms )
 	{
 		return $this->filter_terms_by_authority( $terms, '', TRUE );
