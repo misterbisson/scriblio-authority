@@ -1,8 +1,7 @@
 <?php
 class Authority_Posttype {
 
-	public $admin_obj = FALSE;
-	public $tools_obj = FALSE;
+	public $admin_obj = null;
 	public $version = 7;
 	public $id_base = 'scrib-authority';
 	public $post_type_name = 'scrib-authority';
@@ -21,7 +20,11 @@ class Authority_Posttype {
 		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
 
 		add_action( 'init' , array( $this, 'register_post_type' ) , 11 );
+		add_action( 'wp_head', array( $this, 'wp_head' ) );
+		add_action( 'rss_head', array( $this, 'rss_head' ) );
+		add_action( 'rss2_head', array( $this, 'rss_head' ) );
 
+		add_filter( 'bloginfo_rss', array( $this, 'bloginfo_rss_filter' ), 10, 2 );
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
@@ -31,34 +34,108 @@ class Authority_Posttype {
 
 		if ( is_admin() )
 		{
-			$this->admin();
-			$this->tools();
+			require_once dirname( __FILE__ ) . '/class-authority-posttype-admin.php';
+			$this->admin_obj = new Authority_Posttype_Admin;
+			$this->admin_obj->plugin_url = $this->plugin_url;
+
+			require_once dirname( __FILE__ ) . '/class-authority-posttype-tools.php';
+			$this->tools_obj = new Authority_Posttype_Tools;
+
 			add_filter( 'wp_import_post_meta', array( $this, 'wp_import_post_meta' ), 10, 3 );
 		}
 	}
 
-	public function admin()
+	/**
+	 * hooked into the wp_head function
+	 */
+	public function wp_head()
 	{
-		if ( ! $this->admin_obj )
+		$authority = $this->queried_authority_data();
+
+		if ( $authority && ! is_wp_error( $authority->post ) && ! empty( $authority->post->post_excerpt ) )
 		{
-			require_once __DIR__ . '/class-authority-posttype-admin.php';
-			$this->admin_obj = new Authority_Posttype_Admin;
-			$this->admin_obj->plugin_url = $this->plugin_url;
-		}
+			echo '<meta name="description" content="' . esc_attr( $authority->post->post_excerpt ) . '">';
+		}//end if
+	}//end wp_head
 
-		return $this->admin_obj;
-	}
-
-	public function tools()
+	/**
+	 * hooked into the rss_head action to insert a thumbnail image if available
+	 */
+	public function rss_head()
 	{
-		if ( ! $this->tools_obj )
-		{
-			require_once __DIR__ . '/class-authority-posttype-tools.php';
-			$this->tools_obj = new Authority_Posttype_Tools;
-		}
+		$authority = $this->queried_authority_data();
 
-		return $this->tools_obj;
-	}
+		if ( ! $authority || is_wp_error( $authority->post ) )
+		{
+			return;
+		}//end if
+
+		if ( has_post_thumbnail( $authority->post->ID ) )
+		{
+			$image_url = wp_get_attachment_image_src( get_post_thumbnail_id( $authority->post->ID ), 'thumbnail' );
+			$image_url = $image_url[0];
+
+			$image  = '<image>';
+			$image .= '<url>' . esc_url( $image_url ) . '</url>';
+			$image .= '<title>' . wp_kses( $authority->post->post_title, array() ) . '</title>';
+			$image .= '<link>' . esc_url( get_permalink( $authority->post->ID ) ) . '</link>';
+			$image .= '</image>';
+
+			echo $image;
+
+			unset( $image, $image_url );
+		}//end if
+	}//end rss_head
+
+	/**
+	 * hooked into the bloginfo_rss filter to override the description of the feed based on the term
+	 * authority record
+	 */
+	public function bloginfo_rss_filter( $data, $which )
+	{
+		if ( 'description' != $which )
+		{
+			return $data;
+		}//end if
+
+		$authority = $this->queried_authority_data();
+
+		if ( ! $authority || is_wp_error( $authority->post ) )
+		{
+			return $data;
+		}//end if
+
+		return wp_kses( $authority->post->post_excerpt, array() );
+	}//end bloginfo_rss_filter
+
+	/**
+	 * grab the queried object and determine if it is an authority record. Return authority data
+	 * or FALSE depending on the result
+	 */
+	public function queried_authority_data()
+	{
+		// let's cache the record so we don't make unnecessary queries
+		static $authority = null;
+
+		if ( null !== $authority )
+		{
+			return $authority;
+		}//end if
+
+		$term      = get_queried_object();
+		$authority = $this->get_term_authority( $term );
+
+		if ( ! $authority )
+		{
+			$authority = FALSE;
+
+			return $authority;
+		}//end if
+
+		$authority->post = get_post( $authority->post_id );
+
+		return $authority;
+	}//end queried_authority_data
 
 	public function delete_term_authority_cache( $term )
 	{
@@ -348,11 +425,11 @@ class Authority_Posttype {
 				// remove_post_type_support(  $this->post_type_name , 'revisions' );
 
 				// remove the action before attempting to save the post, then reinstate it
-				if ( is_admin() )
+				if( isset( $this->admin_obj ))
 				{
-					remove_action( 'save_post', array( $this->admin(), 'save_post' ));
+					remove_action( 'save_post', array( $this->admin_obj, 'save_post' ));
 					wp_insert_post( $post );
-					add_action( 'save_post', array( $this->admin(), 'save_post' ));
+					add_action( 'save_post', array( $this->admin_obj, 'save_post' ));
 				}//end if
 				else
 				{
@@ -547,17 +624,31 @@ class Authority_Posttype {
 //					'editor',
 					'thumbnail',
 				),
-				'register_meta_box_cb' => is_admin() ? array( $this->admin(), 'metaboxes' ) : FALSE,
+				'register_meta_box_cb' => array( $this->admin_obj , 'metaboxes' ),
 				'public' => TRUE,
-				'publicly_queryable' => FALSE,
-				'exclude_from_search' => TRUE,
 				'taxonomies' => array_keys( $taxonomies ),
 			)
 		);
 	}
 
-	public function enforce_authority_on_object( $object_id )
+	// WP sometimes fails to update this count during regular operations, so this fixes that
+	// it's not actually called anywhere, though
+	function _update_term_counts()
 	{
+		global $wpdb;
+
+		$wpdb->get_results('
+			UPDATE '. $wpdb->term_taxonomy .' tt
+			SET tt.count = (
+				SELECT COUNT(*)
+				FROM '. $wpdb->term_relationships .' tr
+				WHERE tr.term_taxonomy_id = tt.term_taxonomy_id
+			)'
+		);
+	}
+
+	public function enforce_authority_on_object( $object_id )
+	{		
 		// don't run on post revisions (almost always happens just before the real post is saved)
 		if ( wp_is_post_revision( $object_id ) )
 			return;
