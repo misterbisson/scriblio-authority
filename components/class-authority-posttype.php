@@ -31,6 +31,8 @@ class Authority_Posttype {
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'scriblio_facet_taxonony_terms', array( $this, 'scriblio_facet_taxonony_terms' ) );
 
+		// We use save_post instead of set_object_terms for a reason
+		// If we use set_object_terms taxonomies with no terms set will cause some taxonomy terms to be removed
 		add_action( 'save_post', array( $this , 'enforce_authority_on_object' ) );
 
 		if ( is_admin() )
