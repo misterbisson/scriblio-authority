@@ -17,8 +17,15 @@ class Scriblio_Authority_Suggest
 		add_rewrite_endpoint( $this->ep_name_suggest, EP_ALL );
 
 		add_filter( 'request', array( $this, 'request' ) );
-		
-		wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
+
+		if ( is_admin() )
+		{
+			wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
+		}
+		else
+		{
+			wp_localize_script( 'jquery', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
+		}
 	}//end init
 
 	public function add_query_var( $qvars )
