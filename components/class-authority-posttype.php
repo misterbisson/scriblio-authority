@@ -173,11 +173,15 @@ class Authority_Posttype {
 	{
 
 		// validate the input
-		if( ! isset( $term->term_id , $term->taxonomy , $term->term_taxonomy_id ))
+		if( ! isset( $term->term_id , $term->taxonomy , $term->term_taxonomy_id ) )
+		{
 			return FALSE;
+		}
 
-		if( $return = wp_cache_get( $term->term_taxonomy_id , 'scrib_authority_ttid_'. $this->version ))
+		if( $return = wp_cache_get( $term->term_taxonomy_id , 'scrib_authority_ttid_'. $this->version ) )
+		{
 			return $return;
+		}
 
 		// query to find a matching authority record
 		$query = array(
@@ -210,6 +214,36 @@ class Authority_Posttype {
 			$return = array_intersect_key( (array) $authority_meta , $return );
 			$return['post_id'] = $authority[0]->ID;
 
+			// sanity check to make sure this authority record contains
+			// valid terms in our system
+			if ( ! empty( $return['primary_term'] ) )
+			{
+				if ( ! isset( $return['primary_term']->term_id ) || ! isset( $return['primary_term']->taxonomy ) )
+				{
+					return FALSE;
+				}
+				$term_candidate = get_term( $return['primary_term']->term_id, $return['primary_term']->taxononmy );
+				if ( ! $term_candidate || is_wp_error( $term_candidate ) )
+				{
+					return FALSE;
+				}
+			}
+			if ( ! empty( $return['alias_terms'] ) )
+			{
+				foreach( $return['alias_terms'] as $ttid => $alias_term )
+				{
+					if ( ! isset( $alias_term->term_id ) || ! isset( $alias_term->taxonomy ) )
+					{
+						return FALSE;
+					}
+					$term_candidate = get_term( $alias_term->term_id, $alias_term->taxononmy );
+					if ( ! $term_candidate || is_wp_error( $term_candidate ) )
+					{
+						return FALSE;
+					}
+				}
+			}
+					 
 			if( 1 < count( $authority ))
 			{
 				foreach( $authority as $conflict )
@@ -292,7 +326,8 @@ class Authority_Posttype {
 		}
 
 		// test if this is a valid term
-		if( ! get_term( $authority->primary_term->term_id , $authority->primary_term->taxonomy ) )
+		$term = get_term( $authority->primary_term->term_id , $authority->primary_term->taxonomy );
+		if( ! $term && ! is_wp_error( $term ) )
 		{
 			return $permalink;
 		}
@@ -913,12 +948,15 @@ class Authority_Posttype {
 			// okay, does the input term at least smell like a real term?
 			elseif( isset( $input_term->term_id , $input_term->taxonomy , $input_term->term_taxonomy_id , $input_term->count ))
 			{
-				$output_terms[ $input_term->term_taxonomy_id ] = get_term( $input_term->term_id , $input_term->taxonomy );
-
-				if ( $honor_input_counts )
+				$term_candidate = get_term( $input_term->term_id , $input_term->taxonomy );
+				if ( ! empty( $term_candidate ) && ! is_wp_error( $term_candidate ) )
 				{
-					$output_terms[ $input_term->term_taxonomy_id ]->count = $input_term->count;
-				} // END if
+					$output_terms[ $input_term->term_taxonomy_id ] = $term_candidate;
+					if ( $honor_input_counts )
+					{
+						$output_terms[ $input_term->term_taxonomy_id ]->count = $input_term->count;
+					} // END if
+				}
 			}
 		}
 
