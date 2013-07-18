@@ -29,7 +29,7 @@ class Authority_Posttype {
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
-		add_filter( 'scriblio_facet_taxonony_terms', array( $this, 'scriblio_facet_taxonony_terms' ) );
+		add_filter( 'scriblio_facet_taxonomy_terms', array( $this, 'scriblio_facet_taxonomy_terms' ) );
 
 		// We use save_post instead of set_object_terms for a reason
 		// If we use set_object_terms taxonomies with no terms set will cause some taxonomy terms to be removed
@@ -977,8 +977,8 @@ class Authority_Posttype {
 		return $a->count > $b->count ? -1 : 1;
 	}
 
-	public function scriblio_facet_taxonony_terms( $terms )
+	public function scriblio_facet_taxonomy_terms( $terms )
 	{
 		return $this->filter_terms_by_authority( $terms, '', TRUE );
-	} // END scriblio_facet_taxonony_terms
+	} // END scriblio_facet_taxonomy_terms
 }//end Authority_Posttype class
