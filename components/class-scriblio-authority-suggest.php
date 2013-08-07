@@ -20,7 +20,8 @@ class Scriblio_Authority_Suggest
 
 		if ( is_admin() )
 		{
-			wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
+			add_action( 'wp_ajax_scriblio_authority_suggestions', array( $this, 'get_suggestions' ) );
+			wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => admin_url( 'admin-ajax.php?action=scriblio_authority_suggestions' ) ) );
 		}
 		else
 		{
@@ -39,13 +40,20 @@ class Scriblio_Authority_Suggest
 	{
 		if ( isset( $request[ $this->ep_name_suggest ] ) )
 		{
-			add_filter( 'template_redirect' , array( $this, 'template_redirect' ), 0 );
+			add_filter( 'template_redirect' , array( $this, 'get_suggestions' ), 0 );
 		}//end if
 
 		return $request;
 	}//end request
 
-	public function template_redirect()
+	/*
+	 * returns a json formatted list of suggestions when called via public or dashboard URLs like:
+	 * http://site.org/EP_NAME/?s=$search
+	 * http://site.org/wp-admin/admin-ajax.php?action=scriblio_authority_suggestions&s=$search
+	 *
+	 * This is a public facing, unprotected method.
+	*/
+	public function get_suggestions()
 	{
 		$s = trim( $_GET['s'] );
 		$suggestions = $this->suggestions( $s );
@@ -53,7 +61,7 @@ class Scriblio_Authority_Suggest
 		header('Content-Type: application/json');
 		echo json_encode( $suggestions );
 		die;
-	}//end template_redirect
+	}//end get_suggestions
 
 	/**
 	 * generate suggestions based on a search term
