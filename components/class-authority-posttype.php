@@ -17,10 +17,6 @@ class Authority_Posttype {
 	{
 		$this->plugin_url = untrailingslashit( plugin_dir_url( __FILE__ ));
 
-		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , $this->version );
-		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , $this->version , TRUE );
-		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
-
 		add_action( 'init' , array( $this, 'init' ) , 11 );
 		add_action( 'wp_head', array( $this, 'wp_head' ) );
 		add_action( 'rss_head', array( $this, 'rss_head' ) );
@@ -47,6 +43,10 @@ class Authority_Posttype {
 
 	public function init()
 	{
+		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , $this->version );
+		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , $this->version , TRUE );
+		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
+
 		$this->register_post_type();
 		$this->go_opencalais();
 	}
