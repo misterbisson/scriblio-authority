@@ -21,13 +21,29 @@ class Scriblio_Authority_Suggest
 		if ( is_admin() )
 		{
 			add_action( 'wp_ajax_scriblio_authority_suggestions', array( $this, 'get_suggestions' ) );
-			wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => admin_url( 'admin-ajax.php?action=scriblio_authority_suggestions' ) ) );
-		}
+			add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
+		}//end if
 		else
 		{
-			wp_localize_script( 'jquery', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
-		}
+			add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ) );
+		}//end else
 	}//end init
+
+	/**
+	 * hooked to wp_enqueue_scripts action
+	 */
+	public function wp_enqueue_scripts()
+	{
+		wp_localize_script( 'jquery', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
+	}//end wp_enqueue_scripts
+
+	/**
+	 * hooked to admin_enqueue_scripts action
+	 */
+	public function admin_enqueue_scripts()
+	{
+		wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => admin_url( 'admin-ajax.php?action=scriblio_authority_suggestions' ) ) );
+	}//end admin_enqueue_scripts
 
 	public function add_query_var( $qvars )
 	{
@@ -40,7 +56,7 @@ class Scriblio_Authority_Suggest
 	{
 		if ( isset( $request[ $this->ep_name_suggest ] ) )
 		{
-			add_filter( 'template_redirect' , array( $this, 'get_suggestions' ), 0 );
+			add_filter( 'template_redirect', array( $this, 'get_suggestions' ), 0 );
 		}//end if
 
 		return $request;
@@ -66,7 +82,7 @@ class Scriblio_Authority_Suggest
 	/**
 	 * generate suggestions based on a search term
 	 */
-	public function suggestions( $s = '' , $_taxonomy = array() )
+	public function suggestions( $s = '', $_taxonomy = array() )
 	{
 		$cache_id = 'authority_suggestions';
 
@@ -83,14 +99,14 @@ class Scriblio_Authority_Suggest
 		{
 			if( is_string( $_taxonomy ))
 			{
-				$taxonomy = explode( ',' , $_taxonomy );
+				$taxonomy = explode( ',', $_taxonomy );
 			}//end if
 			else
 			{
 				$taxonomy = $_taxonomy;
 			}//end else
 
-			$taxonomy = array_filter( array_map( 'trim', $taxonomy ) , 'taxonomy_exists' );
+			$taxonomy = array_filter( array_map( 'trim', $taxonomy ), 'taxonomy_exists' );
 		}//end if
 		else
 		{
@@ -102,7 +118,7 @@ class Scriblio_Authority_Suggest
 		$cache_key = md5( $s . implode( $taxonomy ) . (int) empty( $_taxonomy ) );
 
 		// get results from the cache or generate them fresh if necessary
-		$suggestions = wp_cache_get( $cache_key , $cache_id );
+		$suggestions = wp_cache_get( $cache_key, $cache_id );
 
 		if( ! $suggestions )
 		{
@@ -177,7 +193,7 @@ class Scriblio_Authority_Suggest
 				}//end foreach
 			}//end if
 
-			wp_cache_set( $cache_key , $suggestions , $cache_id , 300 );
+			wp_cache_set( $cache_key, $suggestions, $cache_id, 300 );
 		}//end if
 
 		return $suggestions;
