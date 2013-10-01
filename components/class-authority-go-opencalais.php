@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This class includes code to integrate with https://github.com/GigaOM/go-opencalais.
+ * This class includes code to integrate with https://github.com/Gigaom/go-opencalais.
  */
 class Authority_GO_OpenCalais
 {
