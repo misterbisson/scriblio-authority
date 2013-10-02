@@ -485,7 +485,8 @@
 		},
 		search: function( $root, $entry ) {
 			var params = {
-				s: $.trim( $entry.val() )
+				s: $.trim( $entry.val() ),
+				threshold: scrib_authority_suggest.threshold
 			};
 
 			if ( 0 === params.s.length ) {

@@ -34,7 +34,7 @@ class Scriblio_Authority_Suggest
 	 */
 	public function wp_enqueue_scripts()
 	{
-		wp_localize_script( 'jquery', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ) ) );
+		wp_localize_script( 'jquery', 'scrib_authority_suggest', array( 'url' => home_url( "/{$this->ep_name_suggest}" ), 'threshold' => apply_filters( 'scriblio_authority_suggestions_threshold', 0 ) ) );
 	}//end wp_enqueue_scripts
 
 	/**
@@ -42,7 +42,7 @@ class Scriblio_Authority_Suggest
 	 */
 	public function admin_enqueue_scripts()
 	{
-		wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => admin_url( 'admin-ajax.php?action=scriblio_authority_suggestions' ) ) );
+		wp_localize_script( 'jquery-ui-core', 'scrib_authority_suggest', array( 'url' => admin_url( 'admin-ajax.php?action=scriblio_authority_suggestions' ), 'threshold' => 0 ) );
 	}//end admin_enqueue_scripts
 
 	public function add_query_var( $qvars )
