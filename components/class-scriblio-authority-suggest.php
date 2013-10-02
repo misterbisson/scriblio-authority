@@ -72,7 +72,8 @@ class Scriblio_Authority_Suggest
 	public function get_suggestions()
 	{
 		$s = trim( $_GET['s'] );
-		$suggestions = $this->suggestions( $s );
+		$threshold = isset( $_GET['threshold'] ) ? $_GET['threshold'] : 0;
+		$suggestions = $this->suggestions( $s, array(), $threshold );
 
 		header('Content-Type: application/json');
 		echo json_encode( $suggestions );
@@ -82,9 +83,10 @@ class Scriblio_Authority_Suggest
 	/**
 	 * generate suggestions based on a search term
 	 */
-	public function suggestions( $s = '', $_taxonomy = array() )
+	public function suggestions( $s = '', $_taxonomy = array(), $threshold = 0 )
 	{
 		$cache_id = 'authority_suggestions';
+		$threshold = absint( $threshold );
 
 		// get and validate the search string
 		$s = trim( $s );
@@ -115,7 +117,7 @@ class Scriblio_Authority_Suggest
 		}//end else
 
 		// generate a key we can use to cache these results
-		$cache_key = md5( $s . implode( $taxonomy ) . (int) empty( $_taxonomy ) );
+		$cache_key = md5( $s . implode( $taxonomy ) . (int) empty( $_taxonomy ) . (int) $threshold );
 
 		// get results from the cache or generate them fresh if necessary
 		$suggestions = wp_cache_get( $cache_key, $cache_id );
@@ -150,6 +152,9 @@ class Scriblio_Authority_Suggest
 				JOIN {$wpdb->term_taxonomy} AS tt
 					ON tt.term_id = t.term_id 
 					AND tt.taxonomy IN ('" . implode( "','", $taxonomy ). "')
+				WHERE 
+					1 = 1
+					AND $threshold < tt.count
 				ORDER BY
 					hits DESC
 				LIMIT 25;
