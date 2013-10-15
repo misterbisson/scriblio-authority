@@ -278,10 +278,17 @@
 				$root.on( 'keyup.scrib-authority-box', selectors.entry, function( e ) {
 					// the keys that are handled in here: backspace, delete, and regular characters
 					var code = (e.keyCode ? e.keyCode : e.which);
+					var val = $(this).val();
+
+					// disallow < and >
+					if ( 188 === code || 190 === code ) {
+						$(this).val( val.replace( '>', '' ).replace( '<', '' ) );
+						return false;
+					}//end if
 
 					if ( 48 <= code || 8 === code || 46 === code ) {
 						// if a valid char is pressed
-						$root.find( selectors.newitem ).find('.term').html( $(this).val() );
+						$root.find( selectors.newitem ).find('.term').html( val );
 						if( 0 === $.trim( $(this).val() ).length ) {
 							methods.hide_results( $root );
 						} else {

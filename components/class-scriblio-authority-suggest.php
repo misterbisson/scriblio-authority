@@ -71,7 +71,7 @@ class Scriblio_Authority_Suggest
 	*/
 	public function get_suggestions()
 	{
-		$s = trim( $_GET['s'] );
+		$s = wp_kses( trim( urldecode( $_GET['s'] ) ), array() );
 		$threshold = isset( $_GET['threshold'] ) ? $_GET['threshold'] : 0;
 		$suggestions = $this->suggestions( $s, array(), $threshold );
 
