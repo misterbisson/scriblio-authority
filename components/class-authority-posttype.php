@@ -129,6 +129,9 @@ class Authority_Posttype {
 			$image .= '<link>' . esc_url( get_permalink( $authority->post->ID ) ) . '</link>';
 			$image .= '</image>';
 
+			// inject an itunes image, too
+			$image .= '<itunes:image href="' . esc_url( $image_url ) . '" />';
+
 			echo $image;
 
 			unset( $image, $image_url );
