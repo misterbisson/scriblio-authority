@@ -803,10 +803,9 @@ class Authority_Posttype {
 				// if the current term is not in the same taxonomy as the preferred term,
 				// list it for removal from the object
 				if( $authority->primary_term->taxonomy != $term->taxonomy )
-				{
-					$delete_terms[] = $term->term_taxonomy_id;
-				}
-
+				{					
+					$delete_terms[ $term->taxonomy ][] = $term->term_id;
+				}//end if
 			}
 		}
 
@@ -845,14 +844,12 @@ class Authority_Posttype {
 	}
 
 	// WP has no convenient method to delete a single term from an object, but this is what's used in wp-includes/taxonomy.php
-	public function delete_terms_from_object_id( $object_id , $delete_terms )
+	public function delete_terms_from_object_id( $object_id, $delete_terms )
 	{
-		global $wpdb;
-		$in_delete_terms = "'". implode( "', '", $delete_terms ) ."'";
-		do_action( 'delete_term_relationships', $object_id, $delete_terms );
-		$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->term_relationships WHERE object_id = %d AND term_taxonomy_id IN ( $in_delete_terms )" , $object_id ));
-		do_action( 'deleted_term_relationships', $object_id, $delete_terms );
-		wp_update_term_count( $delete_terms , $taxonomy_info->name );
+		foreach ( $delete_terms as $taxonomy => $terms )
+		{
+			wp_remove_object_terms( $object_id, $terms, $taxonomy );
+		}//end foreach
 
 		// clean the object term cache
 		$post = get_post( $object_id );
