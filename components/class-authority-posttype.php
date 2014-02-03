@@ -17,21 +17,21 @@ class Authority_Posttype {
 	{
 		$this->plugin_url = untrailingslashit( plugin_dir_url( __FILE__ ));
 
-		add_action( 'init' , array( $this, 'init' ) , 11 );
+		add_action( 'init', array( $this, 'init' ), 11 );
 		add_action( 'wp_head', array( $this, 'wp_head' ) );
 		add_action( 'rss_head', array( $this, 'rss_head' ) );
 		add_action( 'rss2_head', array( $this, 'rss_head' ) );
 		add_action( 'rss2_ns', array( $this, 'rss2_ns' ) );
 
 		add_filter( 'bloginfo_rss', array( $this, 'bloginfo_rss_filter' ), 10, 2 );
-		add_filter( 'template_redirect', array( $this, 'template_redirect' ) , 1 );
+		add_filter( 'template_redirect', array( $this, 'template_redirect' ), 1 );
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'scriblio_facet_taxonomy_terms', array( $this, 'scriblio_facet_taxonomy_terms' ) );
 
 		// We use save_post instead of set_object_terms for a reason
 		// If we use set_object_terms taxonomies with no terms set will cause some taxonomy terms to be removed
-		add_action( 'save_post', array( $this , 'enforce_authority_on_object' ), 9 );
+		add_action( 'save_post', array( $this, 'enforce_authority_on_object' ), 9 );
 
 		if ( is_admin() )
 		{
@@ -44,9 +44,9 @@ class Authority_Posttype {
 
 	public function init()
 	{
-		wp_register_style( 'scrib-authority' , $this->plugin_url . '/css/scrib-authority.structure.css' , array() , $this->version );
-		wp_register_script( 'scrib-authority' , $this->plugin_url . '/js/jquery.scrib-authority.js' , array('jquery') , $this->version , TRUE );
-		wp_register_script( 'scrib-authority-behavior' , $this->plugin_url . '/js/scrib-authority-behavior.js' , array( 'jquery' , 'scrib-authority' ) , $this->version , TRUE );
+		wp_register_style( 'scrib-authority', $this->plugin_url . '/css/scrib-authority.structure.css', array(), $this->version );
+		wp_register_script( 'scrib-authority', $this->plugin_url . '/js/jquery.scrib-authority.js', array('jquery'), $this->version, TRUE );
+		wp_register_script( 'scrib-authority-behavior', $this->plugin_url . '/js/scrib-authority-behavior.js', array( 'jquery', 'scrib-authority' ), $this->version, TRUE );
 
 		$this->register_post_type();
 		$this->go_opencalais();
@@ -178,9 +178,9 @@ class Authority_Posttype {
 	public function queried_authority_data()
 	{
 		// let's cache the record so we don't make unnecessary queries
-		static $authority = null;
+		static $authority = NULL;
 
-		if ( null !== $authority )
+		if ( NULL !== $authority )
 		{
 			return $authority;
 		}//end if
@@ -207,19 +207,19 @@ class Authority_Posttype {
 		if( ! isset( $term->term_taxonomy_id ))
 			return FALSE;
 
-		wp_cache_delete( $term->term_taxonomy_id , 'scrib_authority_ttid_'. $this->version );
+		wp_cache_delete( $term->term_taxonomy_id, 'scrib_authority_ttid_'. $this->version );
 	}
 
 	public function get_term_authority( $term )
 	{
 
 		// validate the input
-		if( ! isset( $term->term_id , $term->taxonomy , $term->term_taxonomy_id ) )
+		if( ! isset( $term->term_id, $term->taxonomy, $term->term_taxonomy_id ) )
 		{
 			return FALSE;
 		}
 
-		if( $return = wp_cache_get( $term->term_taxonomy_id , 'scrib_authority_ttid_'. $this->version ) )
+		if( $return = wp_cache_get( $term->term_taxonomy_id, 'scrib_authority_ttid_'. $this->version ) )
 		{
 			return $return;
 		}
@@ -256,7 +256,7 @@ class Authority_Posttype {
 				'child_terms' => '',
 			);
 
-			$return = array_intersect_key( (array) $authority_meta , $return );
+			$return = array_intersect_key( (array) $authority_meta, $return );
 			$return['post_id'] = $authority[0]->ID;
 
 			// sanity check to make sure this authority record contains
@@ -297,7 +297,7 @@ class Authority_Posttype {
 				}
 			}
 
-			wp_cache_set( $term->term_taxonomy_id , (object) $return , 'scrib_authority_ttid_'. $this->version , $this->cache_ttl );
+			wp_cache_set( $term->term_taxonomy_id, (object) $return, 'scrib_authority_ttid_'. $this->version, $this->cache_ttl );
 			return (object) $return;
 		}
 
@@ -316,7 +316,7 @@ class Authority_Posttype {
 			( $this->post_type_name == $queried_object->post_type )
 		)
 		{
-			wp_redirect( $this->post_link( '' , $queried_object ) );
+			wp_redirect( $this->post_link( '', $queried_object ) );
 			die;
 		}
 
@@ -367,7 +367,7 @@ class Authority_Posttype {
 		die;
 	}
 
-	public function post_link( $permalink , $post )
+	public function post_link( $permalink, $post )
 	{
 		// return early if this isn't a request for our post type
 		if ( $this->post_type_name != $post->post_type )
@@ -385,7 +385,7 @@ class Authority_Posttype {
 		}
 
 		// test if this is a valid term
-		$term = get_term( $authority->primary_term->term_id , $authority->primary_term->taxonomy );
+		$term = get_term( $authority->primary_term->term_id, $authority->primary_term->taxonomy );
 		if ( ! $term || is_wp_error( $term ) )
 		{
 			return $permalink;
@@ -407,11 +407,11 @@ class Authority_Posttype {
 		$this->taxonomies[ $taxonomy ] = $taxonomy;
 	}
 
-	public function supported_taxonomies( $support = null )
+	public function supported_taxonomies( $support = NULL )
 	{
 		if ( $support )
 		{
-			$this->taxonomy_objects = get_taxonomies( array( 'public' => true ), 'objects' );
+			$this->taxonomy_objects = get_taxonomies( array( 'public' => TRUE ), 'objects' );
 
 			$purge = array_diff( array_keys( $this->taxonomy_objects ), $support );
 
@@ -421,7 +421,7 @@ class Authority_Posttype {
 			}//end foreach
 
 			// sort taxonomies by the singular name
-			uasort( $this->taxonomy_objects, array( $this , '_sort_taxonomies' ));
+			uasort( $this->taxonomy_objects, array( $this, '_sort_taxonomies' ));
 		}//end if
 
 		return $this->taxonomy_objects;
@@ -441,7 +441,8 @@ class Authority_Posttype {
 				if(
 					'category' == $key ||
 					'post_format' == $key
-				) {
+				)
+				{
 					continue;
 				}//end if
 
@@ -470,7 +471,7 @@ class Authority_Posttype {
 		return $tax;
 	}//end simplify_taxonomy_for_json
 
-	public function _sort_taxonomies( $a , $b )
+	public function _sort_taxonomies( $a, $b )
 	{
 		if ( $a->labels->singular_name == $b->labels->singular_name )
 		{
@@ -487,7 +488,7 @@ class Authority_Posttype {
 
 	public function get_post_meta( $post_id )
 	{
-		$this->instance = get_post_meta( $post_id , $this->post_meta_key , TRUE );
+		$this->instance = get_post_meta( $post_id, $this->post_meta_key, TRUE );
 
 		if ( ! is_wp_error( $this->instance ) && isset( $this->instance->primary_term ) )
 		{
@@ -538,7 +539,7 @@ class Authority_Posttype {
 
 				// remove revision support
 				// but this post type doesn't support revisions
-				// remove_post_type_support(  $this->post_type_name , 'revisions' );
+				// remove_post_type_support(  $this->post_type_name, 'revisions' );
 
 				// remove the action before attempting to save the post, then reinstate it
 				if ( is_admin() )
@@ -554,7 +555,7 @@ class Authority_Posttype {
 
 				// add back the revision support
 				// but this post type doesn't support revisions
-				// add_post_type_support( $this->post_type_name , 'revisions' );
+				// add_post_type_support( $this->post_type_name, 'revisions' );
 			}//end if
 		}//end if
 
@@ -623,7 +624,7 @@ class Authority_Posttype {
 	 */
 	public function wp_import_post_meta( $meta, $post_id, $post )
 	{
-		$authority_key = null;
+		$authority_key = NULL;
 
 		// find the scrib-authority meta data and meta index ($authority_key)
 		foreach ( $meta as $key => $data )
@@ -635,7 +636,7 @@ class Authority_Posttype {
 			}//end if
 		}//end foreach
 
-		if ( null === $authority_key )
+		if ( NULL === $authority_key )
 		{
 			// no scrib-authority data was found. Return the meta data as is
 			return $meta;
@@ -726,6 +727,7 @@ class Authority_Posttype {
 
 	public function register_post_type()
 	{
+
 		$taxonomies = $this->supported_taxonomies( $this->taxonomies );
 
 		register_post_type( $this->post_type_name,
@@ -740,7 +742,7 @@ class Authority_Posttype {
 //					'editor',
 					'thumbnail',
 				),
-				'register_meta_box_cb' => array( $this->admin_obj , 'metaboxes' ),
+				'register_meta_box_cb' => array( $this->admin_obj, 'metaboxes' ),
 				'public' => TRUE,
 				'publicly_queryable' => FALSE,
 				'exclude_from_search' => TRUE,
@@ -788,7 +790,7 @@ class Authority_Posttype {
 		}
 
 		// get the terms to work with
-		$terms = wp_get_object_terms( $object_id , array_keys( $this->supported_taxonomies() ) );
+		$terms = wp_get_object_terms( $object_id, array_keys( $this->supported_taxonomies() ) );
 
 		$delete_terms = array();
 
@@ -845,14 +847,14 @@ class Authority_Posttype {
 	}
 
 	// WP has no convenient method to delete a single term from an object, but this is what's used in wp-includes/taxonomy.php
-	public function delete_terms_from_object_id( $object_id , $delete_terms )
+	public function delete_terms_from_object_id( $object_id, $delete_terms )
 	{
 		global $wpdb;
 		$in_delete_terms = "'". implode( "', '", $delete_terms ) ."'";
 		do_action( 'delete_term_relationships', $object_id, $delete_terms );
-		$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->term_relationships WHERE object_id = %d AND term_taxonomy_id IN ( $in_delete_terms )" , $object_id ));
+		$wpdb->query( $wpdb->prepare("DELETE FROM $wpdb->term_relationships WHERE object_id = %d AND term_taxonomy_id IN ( $in_delete_terms )", $object_id ));
 		do_action( 'deleted_term_relationships', $object_id, $delete_terms );
-		wp_update_term_count( $delete_terms , $taxonomy_info->name );
+		wp_update_term_count( $delete_terms, $taxonomy_info->name );
 
 		// clean the object term cache
 		$post = get_post( $object_id );
@@ -871,15 +873,15 @@ class Authority_Posttype {
 	{
 		global $wpdb;
 
-		$term_id_and_tax = $wpdb->get_row( $wpdb->prepare( "SELECT term_id , taxonomy FROM $wpdb->term_taxonomy WHERE term_taxonomy_id = %d LIMIT 1" , $tt_id ) , OBJECT );
+		$term_id_and_tax = $wpdb->get_row( $wpdb->prepare( "SELECT term_id, taxonomy FROM $wpdb->term_taxonomy WHERE term_taxonomy_id = %d LIMIT 1", $tt_id ), OBJECT );
 
 		if( ! $term_id_and_tax )
 		{
-			$error = new WP_Error( 'invalid_ttid' , 'Invalid term taxonomy ID' );
+			$error = new WP_Error( 'invalid_ttid', 'Invalid term taxonomy ID' );
 			return $error;
 		}
 
-		return get_term( (int) $term_id_and_tax->term_id , $term_id_and_tax->taxonomy );
+		return get_term( (int) $term_id_and_tax->term_id, $term_id_and_tax->taxonomy );
 	}
 
 	public function get_ttids_in_authority( $post_id )
@@ -926,7 +928,7 @@ class Authority_Posttype {
 			}
 		}
 
-		return (object) array( 'synonym_ttids' => $search_ttids , 'all_ttids' => $exclude_ttids );
+		return (object) array( 'synonym_ttids' => $search_ttids, 'all_ttids' => $exclude_ttids );
 	}
 
 	public function get_related_terms_for_authority( $post_id )
@@ -947,11 +949,11 @@ class Authority_Posttype {
 		global $wpdb;
 		$coincidences = array();
 		foreach( (array) $wpdb->get_results('
-			SELECT t.term_taxonomy_id , COUNT(*) AS hits
+			SELECT t.term_taxonomy_id, COUNT(*) AS hits
 			FROM '. $wpdb->term_relationships .' t
 			JOIN '. $wpdb->term_relationships .' p ON p.object_id = t.object_id
-			WHERE p.term_taxonomy_id IN( '. implode( ',' , $search_ttids ) .' )
-			AND t.term_taxonomy_id NOT IN( '. implode( ',' , $exclude_ttids ) .' )
+			WHERE p.term_taxonomy_id IN( '. implode( ',', $search_ttids ) .' )
+			AND t.term_taxonomy_id NOT IN( '. implode( ',', $exclude_ttids ) .' )
 			GROUP BY t.term_taxonomy_id
 			ORDER BY hits DESC
 			LIMIT 200
@@ -961,11 +963,11 @@ class Authority_Posttype {
 			$coincidences[ $ttid->term_taxonomy_id ]->count = $ttid->hits;
 		}
 
-		return $this->filter_terms_by_authority( $coincidences , $exclude_ttids );
+		return $this->filter_terms_by_authority( $coincidences, $exclude_ttids );
 
 	}//end get_related_terms_for_authority
 
-	public function filter_terms_by_authority( $input_terms , $exclude_ttids = array(), $honor_input_counts = FALSE )
+	public function filter_terms_by_authority( $input_terms, $exclude_ttids = array(), $honor_input_counts = FALSE )
 	{
 
 		// sanity check
@@ -996,7 +998,7 @@ class Authority_Posttype {
 					{
 						// take the highest count value
 						// note: summing the counts leads to lies, results in double-counts and worse
-						$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = max( $input_term->count , $output_terms[ $authority->primary_term->term_taxonomy_id ]->count );
+						$output_terms[ $authority->primary_term->term_taxonomy_id ]->count = max( $input_term->count, $output_terms[ $authority->primary_term->term_taxonomy_id ]->count );
 					} // END if
 				}
 
@@ -1007,9 +1009,9 @@ class Authority_Posttype {
 				}
 			}
 			// okay, does the input term at least smell like a real term?
-			elseif( isset( $input_term->term_id , $input_term->taxonomy , $input_term->term_taxonomy_id , $input_term->count ))
+			elseif( isset( $input_term->term_id, $input_term->taxonomy, $input_term->term_taxonomy_id, $input_term->count ))
 			{
-				$term_candidate = get_term( $input_term->term_id , $input_term->taxonomy );
+				$term_candidate = get_term( $input_term->term_id, $input_term->taxonomy );
 				if ( ! empty( $term_candidate ) && ! is_wp_error( $term_candidate ) )
 				{
 					$output_terms[ $input_term->term_taxonomy_id ] = $term_candidate;
@@ -1023,16 +1025,16 @@ class Authority_Posttype {
 
 		if( ! empty( $exclude_ttids ))
 		{
-			$output_terms = array_diff_key( $output_terms , $exclude_ttids );
+			$output_terms = array_diff_key( $output_terms, $exclude_ttids );
 		}
 
 		// sort the new term array
-		usort( $output_terms, array( $this , '_sort_filtered_terms' ));
+		usort( $output_terms, array( $this, '_sort_filtered_terms' ));
 
 		return $output_terms;
 	}
 
-	public function _sort_filtered_terms( $a , $b )
+	public function _sort_filtered_terms( $a, $b )
 	{
 		// reverse compare so items with higher counts are at the top of the array
 		return $a->count > $b->count ? -1 : 1;
