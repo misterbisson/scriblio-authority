@@ -486,16 +486,16 @@ class Authority_Posttype {
 		return $a->labels->singular_name < $b->labels->singular_name ? -1 : 1;
 	}
 
-	public function get_primary_tax( $post_id )
+	public function get_primary_term( $post_id )
 	{
 		$post_meta = $this->get_post_meta( $post_id );
 
-		if ( ! isset( $post_meta['primary_term']->taxonomy ) )
+		if ( ! isset( $post_meta['primary_term']->taxonomy, $post_meta['primary_term']->term_id ) )
 		{
 			return FALSE;
 		} // END if
 
-		return $post_meta['primary_term']->taxonomy;
+		return $post_meta['primary_term'];
 	} // END get_primary_tax
 
 	public function get_post_meta( $post_id )
