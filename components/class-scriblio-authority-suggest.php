@@ -14,7 +14,7 @@ class Scriblio_Authority_Suggest
 	 */
 	public function init()
 	{
-		add_rewrite_endpoint( $this->ep_name_suggest, EP_ALL );
+		add_rewrite_endpoint( $this->ep_name_suggest, EP_ROOT );
 
 		add_filter( 'request', array( $this, 'request' ) );
 
