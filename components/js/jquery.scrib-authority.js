@@ -53,6 +53,10 @@
 	var methods = {
 		init: function( params ) {
 
+			if ( params.url ) {
+				scrib_authority_suggest.url = params.url;
+			}
+
 			// fix the ajax url
 			if ( 'https:' === window.location.protocol ) {
 				scrib_authority_suggest.url = scrib_authority_suggest.url.replace( 'http:', 'https:' );
@@ -504,9 +508,9 @@
 				return;
 			}//end if
 
-			var xhr = $.getJSON( scrib_authority_suggest.url, params );
+			var xhr = $.getJSON( scrib_authority_suggest.url + '?callback=?', params );
 
-			$.when( xhr ).done( function( data ) {
+			xhr.done( function( data ) {
 				if ( typeof data != 'undefined' ) {
 					$root.ScribAuthority('results', data);
 					methods.show_results( $root );
