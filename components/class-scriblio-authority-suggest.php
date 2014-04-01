@@ -76,7 +76,17 @@ class Scriblio_Authority_Suggest
 		$suggestions = $this->suggestions( $s, array(), $threshold );
 
 		header('Content-Type: application/json');
-		echo json_encode( $suggestions );
+
+		$json = json_encode( $suggestions );
+
+		if ( isset( $_GET['callback'] ) )
+		{
+			echo preg_replace( '/[^a-zA-Z0-9\._\-]/', '', $_GET['callback'] ) . '(' . $json . ');';
+		}//end if
+		else
+		{
+			echo $json;
+		}//end else
 		die;
 	}//end get_suggestions
 
