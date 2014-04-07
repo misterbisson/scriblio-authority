@@ -53,7 +53,7 @@
 	var methods = {
 		init: function( params ) {
 
-			if ( params.url ) {
+			if ( 'undefined' != typeof params && 'undefined' != typeof params.url ) {
 				scrib_authority_suggest.url = params.url;
 			}
 
