@@ -30,9 +30,14 @@
 
 .scrib-authority-box .scrib-authority-box-input {
 	border: 0;
+	box-shadow: none;
 	outline: 0px;
 	padding: 7px 10px 0px;
 	width: 400px;
+}
+
+.scrib-authority-box .scrib-authority-box-input:focus {
+	box-shadow: none;
 }
 
 .scrib-authority-box .scrib-authority-box-entry-container {
