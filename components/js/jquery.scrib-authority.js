@@ -511,6 +511,8 @@
 			}//end if
 
 			var url = scrib_authority_suggest.url;
+
+			// we need to handle both pretty and admin-ajax URLs - so ? may or may not be present
 			if ( url.indexOf( '?' ) ) {
 				url += '&callback=?';
 			} else {
