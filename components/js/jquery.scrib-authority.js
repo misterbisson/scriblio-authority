@@ -66,12 +66,14 @@
 
 			options = $.extend( defaults, params );
 
+			var type = 'undefined' != typeof this.attr( 'type' ) ? this.attr( 'type' ) : 'text';
+
 			// set up the html injection variables
 			html = {
 				wrapper : '<div class="' + selector + '" />',
 				item    : '<li class="' + selector + '-item" />',
 				items   : '<ul class="' + selector + '-items"></ul>',
-				entry   : '<input type="' + this.attr('type') + '" class="' + selector + '-entry ' + selector + '-input" />'
+				entry   : '<input type="' + type + '" class="' + selector + '-entry ' + selector + '-input" />'
 			};
 
 			// initilaize the common selectors that we'll be using
