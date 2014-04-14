@@ -510,7 +510,16 @@
 				return;
 			}//end if
 
-			var xhr = $.getJSON( scrib_authority_suggest.url + '?callback=?', params );
+			var url = scrib_authority_suggest.url;
+
+			// we need to handle both pretty and admin-ajax URLs - so ? may or may not be present
+			if ( url.indexOf( '?' ) ) {
+				url += '&callback=?';
+			} else {
+				url += '?callback=?';
+			}//end else
+
+			var xhr = $.getJSON( url, params );
 
 			xhr.done( function( data ) {
 				if ( typeof data != 'undefined' ) {
