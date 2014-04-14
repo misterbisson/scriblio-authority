@@ -510,7 +510,14 @@
 				return;
 			}//end if
 
-			var xhr = $.getJSON( scrib_authority_suggest.url + '?callback=?', params );
+			var url = scrib_authority_suggest.url;
+			if ( url.indexOf( '?' ) ) {
+				url += '&callback=?';
+			} else {
+				url += '?callback=?';
+			}//end else
+
+			var xhr = $.getJSON( url, params );
 
 			xhr.done( function( data ) {
 				if ( typeof data != 'undefined' ) {
