@@ -111,7 +111,6 @@ class Authority_Posttype_Admin extends Authority_Posttype
 		$this->instance = $this->get_post_meta( $post->ID );
 
 		$taxonomies = authority_record()->simple_authority_taxonomies();
-
 		$primary_term = array();
 		$json = array();
 		if ( isset( $this->instance['primary_term']->term_id ) )
@@ -120,7 +119,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 
 			// check for any conflicts with this term
 			$authority_conflicts = array();
-			$authority_check = $this->get_term_authority( $term );
+			$authority_check = $this->get_term_authority( $this->instance['primary_term'] );
 			if ( isset( $authority_check->conflict_ids ) )
 			{
 				$authority_conflicts[] = (object) array(
@@ -361,7 +360,7 @@ class Authority_Posttype_Admin extends Authority_Posttype
 			}//end if
 
 			$target[ $which ][] = $term;
-			if ( $delete_chache )
+			if ( $delete_cache )
 			{
 				$this->delete_term_authority_cache( $term );
 			}//end if
