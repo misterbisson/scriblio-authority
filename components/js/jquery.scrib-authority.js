@@ -158,7 +158,7 @@
 				$entry_container.css('top', function() {
 					var margin = $( selectors.entry ).css( 'margin-bottom' ).replace("px", "");
 
-					return parseInt( margin ) * -1;
+					return parseInt( margin, 10 ) * -1;
 				});
 
 				$root.append('<div class="' + selector + '-clearfix"/>');
