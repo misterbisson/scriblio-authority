@@ -153,6 +153,14 @@
 
 				// add the entry/results container
 				$root.append( $entry_container );
+
+				//set top to the inverse of search-box margin to ensure it snugs up to the search box
+				$entry_container.css('top', function() {
+					var margin = $( selectors.entry ).css( 'margin-bottom' ).replace("px", "");
+
+					return parseInt( margin ) * -1;
+				});
+
 				$root.append('<div class="' + selector + '-clearfix"/>');
 
 				if ( options.replace_field ) {
