@@ -96,7 +96,7 @@
 				$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><h4>Custom</h4><ul></ul></li>') );
 			}//end if
 
-			$results.find('.' + selector + '-result-category-results ul').append('<li class="' + selector + '-no-results">No results!</li>');
+			$results.find('.' + selector + '-result-category-results ul').append('<li class="' + selector + '-no-results">No terms were found matching your search.</li>');
 
 			var $entry_container = $('<div class="' + selector + '-entry-container"/>');
 
@@ -601,9 +601,11 @@
 		show_results: function( $root ) {
 			var $results = $root.find( selectors.results );
 
-			if( $results.find( selectors.item ).length > 0 ) {
+			if( $results.find( '.scrib-authority-box-result-category-results ' + selectors.item ).length > 0 ) {
 				$results.find( selectors.noresults ).hide();
-			}//end if
+			} else {
+				$results.find( selectors.noresults ).show();
+			}//end else
 
 			if ( 0 !== $.trim( $root.find( selectors.entry ).val() ).length ) {
 				$results.addClass('show');
