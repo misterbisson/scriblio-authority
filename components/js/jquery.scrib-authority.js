@@ -179,7 +179,6 @@
 				// click event: result item
 				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
 					e.preventDefault();
-					console.log( e );
 
 					methods.select_item( $(this), $root );
 					methods.update_target( $root );
