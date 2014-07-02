@@ -177,7 +177,7 @@
 				methods.taxonomies( $(this), options.taxonomies );
 
 				// click event: result item
-				$root.on( 'click.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
+				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
 					e.preventDefault();
 
 					methods.select_item( $(this), $root );
@@ -185,19 +185,19 @@
 				});
 
 				// click event: root element
-				$root.on( 'click.scrib-authority-box', function( e ) {
+				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', function( e ) {
 					// if the root element is clicked, focus the entry
 					$(this).find( selectors.entry ).focus();
 				});
 
 				// click event: base item
-				$root.on( 'click.scrib-authority-box', selectors.item, function( e ) {
+				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', selectors.item, function( e ) {
 					// all we want to do is stop propagation so the entry isn't auto-focused
 					e.stopPropagation();
 				});
 
 				// click event: item close
-				$root.on( 'click.scrib-authority-box', selectors.close, function( e ) {
+				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', selectors.close, function( e ) {
 					// an item is being x-ed out.  remove it
 					e.stopPropagation();
 
