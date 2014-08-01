@@ -212,15 +212,18 @@ class Authority_Posttype {
 
 	public function get_term_authority( $term )
 	{
-
 		// validate the input
 		if( ! isset( $term->term_id, $term->taxonomy, $term->term_taxonomy_id ) )
 		{
 			return FALSE;
 		}
 
-		if( $return = wp_cache_get( $term->term_taxonomy_id, 'scrib_authority_ttid_'. $this->version ) )
+		if ( FALSE !== ( $return = wp_cache_get( $term->term_taxonomy_id, 'scrib_authority_ttid_'. $this->version ) ) )
 		{
+			if ( -1 == $return )
+			{
+				return FALSE; // convert our "no auth term" token to a valid return value
+			}
 			return $return;
 		}
 
@@ -301,7 +304,9 @@ class Authority_Posttype {
 			return (object) $return;
 		}
 
-		// no authority records
+		// no authority records. set the value of the ttid to -1 so we'll know
+		// that we don't have an authority record for this ttid
+		wp_cache_set( $term->term_taxonomy_id, -1, 'scrib_authority_ttid_'. $this->version, $this->cache_ttl );
 		return FALSE;
 	}
 
@@ -981,7 +986,6 @@ class Authority_Posttype {
 
 	public function filter_terms_by_authority( $input_terms, $exclude_ttids = array(), $honor_input_counts = FALSE )
 	{
-
 		// sanity check
 		if( ! is_array( $input_terms ) )
 		{
@@ -990,7 +994,7 @@ class Authority_Posttype {
 
 		// iterate through the array, lookup the authority
 		$output_terms = array();
-		foreach( $input_terms as $input_term )
+		foreach ( $input_terms as $input_term )
 		{
 			// is there an authority record for this term?
 			if( $authority = $this->get_term_authority( $input_term ) )
@@ -1019,7 +1023,7 @@ class Authority_Posttype {
 				{
 					$output_terms[ $authority->primary_term->term_taxonomy_id ]->authority_synonyms[ $input_term->term_taxonomy_id ] = $input_term;
 				}
-			}
+			}//END if
 			// okay, does the input term at least smell like a real term?
 			elseif( isset( $input_term->term_id, $input_term->taxonomy, $input_term->term_taxonomy_id, $input_term->count ))
 			{
@@ -1031,9 +1035,9 @@ class Authority_Posttype {
 					{
 						$output_terms[ $input_term->term_taxonomy_id ]->count = $input_term->count;
 					} // END if
-				}
-			}
-		}
+				}//END if
+			}//END elseif
+		}//END foreach
 
 		if( ! empty( $exclude_ttids ))
 		{
