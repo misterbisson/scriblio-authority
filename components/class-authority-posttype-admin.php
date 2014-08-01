@@ -301,20 +301,20 @@ class Authority_Posttype_Admin extends Authority_Posttype
 	public function metab_coincidences( $post )
 	{
 		// sanity check
-		if( ! isset( $this->instance['primary_term']->name ))
+		if ( ! $post_meta = $this->get_post_meta( $post->ID ) )
 		{
 			return FALSE;
-		}
+		}//end if
 
 		$coincidences = array_slice( (array) $this->get_related_terms_for_authority( $post->ID ) , 0 , 37 );
-?>
-		<p>In addition to the terms entered above, <?php echo '<a href="'. get_term_link( $this->instance['primary_term'] ) .'" target="_blank">'. $this->instance['primary_term']->name .'</a>'; ?> is frequently used with the following terms:</p>
-<?php
+		?>
+		<p>In addition to the terms entered above, <?php echo '<a href="'. get_term_link( $post_meta['primary_term'] ) .'" target="_blank">'. $post_meta['primary_term']->name .'</a>'; ?> is frequently used with the following terms:</p>
+		<?php
 
-		foreach( $coincidences as $k => $v )
+		foreach ( $coincidences as $k => $v )
 		{
 			$coincidences[ $k ]->link = get_term_link( $v );
-		}
+		}//end foreach
 		echo wp_generate_tag_cloud( $coincidences );
 	}//end metab_coincidences
 
