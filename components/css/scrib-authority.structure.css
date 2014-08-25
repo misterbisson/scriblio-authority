@@ -57,7 +57,7 @@
 	border: 1px solid #ccc;
 	display: inline-block;
 	float: left;
-	margin: 0 5px 5px 0;
+	margin: 0 5px .2rem 0;
   overflow: hidden;
 	padding: 0;
   position: relative;
@@ -101,18 +101,22 @@
 }
 
 .scrib-authority-box .taxonomy {
-	border-right: 1px solid #ccc;
+	background: #f6f6f6;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
 	color: #999;
 	cursor: pointer;
+	font-size: .75rem;
+	padding: 0 .25rem;
 }
 
 .scrib-authority-box .scrib-authority-box-results .taxonomy {
-	float: right;
-	border-left: 1px dotted #eee;
-	border-right: none;
 }
 
 .scrib-authority-box .term {
+	display: block;
+	padding-left: 0;
 }
 
 .scrib-authority-box .close {
@@ -172,6 +176,10 @@
 	padding: 3px;
 }
 
+.scrib-authority-box .scrib-authority-box-results .scrib-authority-box-item {
+	cursor: pointer;
+}
+
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-no-results {
 	color: #999;
 }
@@ -212,15 +220,16 @@
 
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-item.focus .taxonomy,
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-item:hover .taxonomy {
-	color: #d1f1ff;
-	border-color: #0789c1;
+	color: #999;
+	border: 0;
+
+	-webkit-text-shadow: 0 -1px transparent;
+	-moz-text-shadow: 0 -1px 0 transparent;
+	-o-text-shadow: 0 -1px 0 transparent;
+	text-shadow: 0 -1px 0 transparent;
 }
 
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-item.focus,
 .scrib-authority-box .scrib-authority-box-results .scrib-authority-box-item:hover {
 	background: #0d9fe2;
-}
-
-.scrib-authority-box .scrib-authority-box-results .scrib-authority-box-item .taxonomy:hover {
-	background: inherit;
 }

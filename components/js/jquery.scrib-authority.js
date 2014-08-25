@@ -371,7 +371,7 @@
 
 					$item.append( $taxonomy );
 				} else {
-					$item.append( $('<span class="' + key + '" />').html( data_value ) );
+					$item.prepend( $('<span class="' + key + '" />').html( data_value ) );
 				}//end if
 			});
 
