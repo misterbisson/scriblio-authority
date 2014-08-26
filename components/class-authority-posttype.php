@@ -1056,6 +1056,18 @@ class Authority_Posttype {
 		return $a->count > $b->count ? -1 : 1;
 	}
 
+	/**
+	 * filter callback for the 'scriblio_facet_taxonomy_terms' action from
+	 * scriblio.
+	 *
+	 * @param array $terms list of term objects to filter
+	 * @param mixed $exclude_ttids taxonomy term ids to exclude from the
+	 *  results
+	 * @param bool $honor_input_counts if TRUE the result terms counts will be
+	 *  set to the first term from $terms that maps to an output term. if
+	 *  FALSE then the output term's count will be set to the maximum of
+	 *  all input terms from $terms that're mapped to it.
+	 */
 	public function scriblio_facet_taxonomy_terms( $terms, $exclude_ttids = '', $honor_input_counts = TRUE )
 	{
 		return $this->filter_terms_by_authority( $terms, $exclude_ttids, $honor_input_counts );
