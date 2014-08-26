@@ -304,8 +304,11 @@
 						// if a valid char is pressed
 						$root.find( selectors.newitem ).find('.term').html( val );
 						if( 0 === $.trim( $(this).val() ).length ) {
+							$root.closest( 'form' ).removeClass( 'has-text' );
+							$root.find( selectors.results ).removeClass( 'has-results no-results' );
 							methods.hide_results( $root );
 						} else {
+							$root.closest( 'form' ).addClass( 'has-text' );
 							if ( timeout_handler ) {
 								window.clearTimeout( timeout_handler );
 							}//end if
@@ -602,8 +605,10 @@
 			var $results = $root.find( selectors.results );
 
 			if( $results.find( '.scrib-authority-box-result-category-results ' + selectors.item ).length > 0 ) {
+				$results.addClass( 'has-results' ).removeClass( 'no-results' );
 				$results.find( selectors.noresults ).hide();
 			} else {
+				$results.removeClass( 'has-results' ).addClass( 'no-results' );
 				$results.find( selectors.noresults ).show();
 			}//end else
 
