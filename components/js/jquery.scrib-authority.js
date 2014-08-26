@@ -305,6 +305,7 @@
 						$root.find( selectors.newitem ).find('.term').html( val );
 						if( 0 === $.trim( $(this).val() ).length ) {
 							$root.closest( 'form' ).removeClass( 'has-text' );
+							$root.find( selectors.results ).removeClass( 'has-results no-results' );
 							methods.hide_results( $root );
 						} else {
 							$root.closest( 'form' ).addClass( 'has-text' );
