@@ -1069,7 +1069,7 @@ class Authority_Posttype {
 	} // END scriblio_facet_taxonomy_terms
 
 	/**
-	 * hook to scriblio's 'scriblio_facet_taxonomy_terms' action from
+	 * hook to scriblio's 'scriblio_searchword_to_taxonomy_terms' action from
 	 * scriblio.
 	 *
 	 * @param array $terms list of term objects to filter
