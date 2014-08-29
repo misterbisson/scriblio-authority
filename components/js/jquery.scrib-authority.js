@@ -374,7 +374,7 @@
 
 					$item.append( $taxonomy );
 				} else {
-					$item.prepend( $('<span class="' + key + '" />').html( data_value ) );
+					$item.append( $('<span class="' + key + '" />').html( data_value ) );
 				}//end if
 			});
 
@@ -628,8 +628,7 @@
 					var $taxonomy = $('<span class="taxonomy">' + value.labels.singular_name + '</span>');
 					$taxonomy.data('taxonomy', value);
 					$item.append( $taxonomy );
-					$item.prepend( '<span class="term"></span>' );
-					$item.append( '<span class="close">x</span>' );
+					$item.append( '<span class="term"></span><span class="close">x</span>' );
 					$categories.append( $item );
 				});
 			}//end else
