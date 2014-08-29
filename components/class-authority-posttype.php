@@ -27,7 +27,8 @@ class Authority_Posttype {
 		add_filter( 'template_redirect', array( $this, 'template_redirect' ), 1 );
 		add_filter( 'post_link', array( $this, 'post_link' ), 11, 2 );
 		add_filter( 'post_type_link', array( $this, 'post_link' ), 11, 2 );
-		add_filter( 'scriblio_facet_taxonomy_terms', array( $this, 'scriblio_facet_taxonomy_terms' ), 10, 3 );
+		add_filter( 'scriblio_facet_taxonomy_terms', array( $this, 'scriblio_facet_taxonomy_terms' ) );
+		add_filter( 'scriblio_searchword_to_taxonomy_terms', array( $this, 'scriblio_facet_taxonomy_terms' ), 10, 3 );
 
 		// We use save_post instead of set_object_terms for a reason
 		// If we use set_object_terms taxonomies with no terms set will cause some taxonomy terms to be removed
@@ -1057,19 +1058,27 @@ class Authority_Posttype {
 	}
 
 	/**
-	 * filter callback for the 'scriblio_facet_taxonomy_terms' action from
+	 * hook to scriblio's 'scriblio_facet_taxonomy_terms' action to filter
+	 * $terms by our authority records
+	 *
+	 * @param array $terms list of term objects to filter
+	 */
+	public function scriblio_facet_taxonomy_terms( $terms )
+	{
+		return $this->filter_terms_by_authority( $terms, '', TRUE );
+	} // END scriblio_facet_taxonomy_terms
+
+	/**
+	 * hook to scriblio's 'scriblio_facet_taxonomy_terms' action from
 	 * scriblio.
 	 *
 	 * @param array $terms list of term objects to filter
-	 * @param mixed $exclude_ttids taxonomy term ids to exclude from the
-	 *  results
-	 * @param bool $honor_input_counts if TRUE the result terms counts will be
-	 *  set to the first term from $terms that maps to an output term. if
-	 *  FALSE then the output term's count will be set to the maximum of
-	 *  all input terms from $terms that're mapped to it.
 	 */
-	public function scriblio_facet_taxonomy_terms( $terms, $exclude_ttids = '', $honor_input_counts = TRUE )
+	public function scriblio_searchword_to_taxonomy_terms( $terms )
 	{
-		return $this->filter_terms_by_authority( $terms, $exclude_ttids, $honor_input_counts );
-	} // END scriblio_facet_taxonomy_terms
+		// we set the $honor_input_counts (3rd) param to FALSE so the
+		// resulting term counts will be set to the maximum of
+		// all input terms from $terms that map to it
+		return $this->filter_terms_by_authority( $terms, '', FALSE );
+	} // END scriblio_searchword_to_taxonomy_terms
 }//end Authority_Posttype class
