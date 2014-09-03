@@ -221,7 +221,7 @@ class Authority_Posttype {
 
 		if ( FALSE !== ( $return = wp_cache_get( $term->term_taxonomy_id, 'scrib_authority_ttid_'. $this->version ) ) )
 		{
-			if ( is_int( $return ) && -1 == $return )
+			if ( is_numeric( $return ) && -1 == $return )
 			{
 				return FALSE; // convert our "no auth term" token to a valid return value
 			}
