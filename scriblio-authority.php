@@ -2,7 +2,7 @@
 /*
 Plugin Name: Scriblio Term Authority
 Plugin URI: http://wordpress.org/plugins/scriblio-authority/
-Version: 1.1
+Version: 1.2
 Author: Casey Bisson
 Author URI: http://maisonbisson.com/blog/
 Contributors: borkweb, abackstrom
