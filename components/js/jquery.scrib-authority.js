@@ -177,8 +177,58 @@
 				methods.taxonomies( $(this), options.taxonomies );
 
 				// click event: result item
-				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
+				$root.on( 'click.scrib-authority-box MSPointerDown.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
 					e.preventDefault();
+
+					methods.select_item( $(this), $root );
+					methods.update_target( $root );
+				});
+
+				$root.$current_touch_item = null;
+				$root.current_touch_y_pos = null;
+
+				$root.on( 'touchstart.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
+					$root.$current_touch_item = $( this );
+					$root.current_touch_y_pos = e.changedTouches[0].pageY;
+				});
+
+				$root.on( 'touchend.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
+					// if there isn't a touch start item, bail
+					if ( ! $root.$current_touch_item ) {
+						$root.$current_touch_item = null;
+						$root.current_touch_y_pos = null;
+						return;
+					}//end if
+
+					var original_item = $root.$current_touch_item.find( '.taxonomy' ).html();
+					original_item = original_item + ':' + $root.$current_touch_item.find( '.term' ).html();
+
+					var current_item = $( this ).find( '.taxonomy' ).html();
+					current_item = current_item + ':' + $( this ).find( '.term' ).html();
+
+					// if the end item is not the start item, bail
+					if ( original_item !== current_item ) {
+						$root.$current_touch_item = null;
+						$root.current_touch_y_pos = null;
+						return;
+					}//end if
+
+					// if there are no changedTouches, bail
+					if ( 'undefined' === typeof e.changedTouches || 0 === e.changedTouches.length ) {
+						$root.$current_touch_item = null;
+						$root.current_touch_y_pos = null;
+						return;
+					}
+
+					// if the changed touches moved more than 10 pixels in any direction, bail (we're probably scrolling)
+					if ( $root.current_touch_y_pos + 10 > e.changedTouches[0].pageY || $root.current_touch_y_pos - 10 < e.changeTouches[0].pageY ) {
+						$root.$current_touch_item = null;
+						$root.current_touch_y_pos = null;
+						return;
+					}//end if
+
+					$root.$current_touch_item = null;
+					$root.current_touch_y_pos = null;
 
 					methods.select_item( $(this), $root );
 					methods.update_target( $root );
