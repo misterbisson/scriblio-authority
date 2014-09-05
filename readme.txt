@@ -3,7 +3,7 @@ Contributors: misterbisson, borkweb
 Donate link: http://MaisonBisson.com/
 Tags: tags, custom taxonomies, term authority, tag management, 
 Requires at least: 3.7
-Tested up to: 3.9
+Tested up to: 4.0
 Stable tag: trunk
 
 Tag management made powerful.
