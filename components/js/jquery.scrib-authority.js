@@ -186,8 +186,27 @@
 
 				// click event: root element
 				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', function( e ) {
+					var $entry = $( this ).find( selectors.entry );
+					var $results = $entry.closest( '.scrib-authority-box' ).find( '.scrib-authority-box-results.has-results' );
+
 					// if the root element is clicked, focus the entry
-					$(this).find( selectors.entry ).focus();
+					$entry.focus();
+
+					// when focusing, if the input box already has content in it that returned results, show them
+					if ( $entry.val() && $results.length ) {
+						$results.addClass( 'show' );
+					}//end if
+				});
+
+				// click event: handles dismissing the results box if clicking off of the box or search
+				$( document ).on( 'click.scrib-authority-box-cancel touchstart.scrib-authority-box-cancel MSPointerDown.scrib-authority-box-cancel', function( e ) {
+					var $el = $( event.target );
+
+					if ( $el.is( '.scrib-authority-box' ) || 0 !== $el.closest( '.scrib-authority-box').length ) {
+						return;
+					}//end if
+
+					methods.hide_results( $root );
 				});
 
 				// click event: base item
