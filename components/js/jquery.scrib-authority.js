@@ -193,6 +193,8 @@
 				});
 
 				$root.on( 'touchend.scrib-authority-box', selectors.results + ' ' + selectors.item, function( e ) {
+					e.preventDefault();
+
 					// if there isn't a touch start item, bail
 					if ( ! $root.$current_touch_item ) {
 						$root.$current_touch_item = null;
