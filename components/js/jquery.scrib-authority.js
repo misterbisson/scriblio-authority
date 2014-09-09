@@ -250,7 +250,7 @@
 
 				// click event: handles dismissing the results box if clicking off of the box or search
 				$( document ).on( 'click.scrib-authority-box-cancel touchstart.scrib-authority-box-cancel MSPointerDown.scrib-authority-box-cancel', function( e ) {
-					var $el = $( event.target );
+					var $el = $( e.target );
 
 					if ( $el.is( '.scrib-authority-box' ) || 0 !== $el.closest( '.scrib-authority-box').length ) {
 						return;
