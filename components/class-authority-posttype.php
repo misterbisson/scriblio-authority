@@ -452,7 +452,10 @@ class Authority_Posttype {
 					continue;
 				}//end if
 
-				$taxonomy = get_taxonomy( $taxonomy );
+				if ( ! $taxonomy = get_taxonomy( $taxonomy ) )
+				{
+					continue;
+				}
 
 				$taxonomies[ $key ] = $this->simplify_taxonomy_for_json( $taxonomy );
 			}//end foreach
