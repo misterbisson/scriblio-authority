@@ -206,7 +206,9 @@
 					original_item = original_item + ':' + $root.$current_touch_item.find( '.term' ).html();
 
 					var current_item = $( this ).find( '.taxonomy' ).html();
-					current_item = current_item + ':' + $( this ).find( '.term' ).html();
+					current_item = current_item + ':' + $ele.find( '.term' ).html();
+
+					var $ele = $( this );
 
 					// if the end item is not the start item, bail
 					if ( original_item !== current_item ) {
@@ -220,20 +222,30 @@
 						$root.$current_touch_item = null;
 						$root.current_touch_y_pos = null;
 						return;
-					}
-
-					// if the changed touches moved more than 10 pixels in any direction, bail (we're probably scrolling)
-					if ( $root.current_touch_y_pos + 10 < e.changedTouches[0].pageY || $root.current_touch_y_pos - 10 > e.changeTouches[0].pageY ) {
-						$root.$current_touch_item = null;
-						$root.current_touch_y_pos = null;
-						return;
 					}//end if
 
-					$root.$current_touch_item = null;
-					$root.current_touch_y_pos = null;
+					//we need a bit of a delay here and below to avoid race conditions that prevent these from firing correctly
+					var lastTest = window.setTimeout(
+						function(){
 
-					methods.select_item( $(this), $root );
-					methods.update_target( $root );
+						// if the changed touches moved more than 10 pixels in any direction, bail (we're probably scrolling)
+						if ( ( $root.current_touch_y_pos + 10 ) < e.changedTouches[0].pageY || ( $root.current_touch_y_pos - 10 ) > e.changeTouches[0].pageY ) {
+							$root.$current_touch_item = null;
+							$root.current_touch_y_pos = null;
+							return;
+						}//end if
+					}, 200);
+
+					//we need a bit of a delay here and above to avoid race conditions that prevent these from firing correctly
+					var doUpdates = window.setTimeout(
+						function(){
+
+						$root.$current_touch_item = null;
+						$root.current_touch_y_pos = null;
+
+						methods.select_item( $ele, $root );
+						methods.update_target( $root );
+					}, 500);
 				});
 
 				// click event: root element
