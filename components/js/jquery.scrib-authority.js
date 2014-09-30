@@ -237,7 +237,8 @@
 							}//end if
 						}, 200);
 
-						var changeStuff = window.setTimeout(
+						//we need a bit of a delay here and above to avoid race conditions that prevent these from firing correctly
+						var doUpdates = window.setTimeout(
 							function(){
 
 							$root.$current_touch_item = null;
