@@ -203,37 +203,49 @@
 					}//end if
 
 					var original_item = $root.$current_touch_item.find( '.taxonomy' ).html();
-					original_item = original_item + ':' + $root.$current_touch_item.find( '.term' ).html();
-
 					var current_item = $( this ).find( '.taxonomy' ).html();
-					current_item = current_item + ':' + $( this ).find( '.term' ).html();
 
-					// if the end item is not the start item, bail
-					if ( original_item !== current_item ) {
-						$root.$current_touch_item = null;
-						$root.current_touch_y_pos = null;
-						return;
-					}//end if
+					var $ele = $( this );
 
-					// if there are no changedTouches, bail
-					if ( 'undefined' === typeof e.changedTouches || 0 === e.changedTouches.length ) {
-						$root.$current_touch_item = null;
-						$root.current_touch_y_pos = null;
-						return;
-					}
 
-					// if the changed touches moved more than 10 pixels in any direction, bail (we're probably scrolling)
-					if ( $root.current_touch_y_pos + 10 < e.changedTouches[0].pageY || $root.current_touch_y_pos - 10 > e.changeTouches[0].pageY ) {
-						$root.$current_touch_item = null;
-						$root.current_touch_y_pos = null;
-						return;
-					}//end if
+					original_item = original_item + ':' + $root.$current_touch_item.find( '.term' ).html();
+					current_item = current_item + ':' + $ele.find( '.term' ).html();
 
-					$root.$current_touch_item = null;
-					$root.current_touch_y_pos = null;
+						// if the end item is not the start item, bail
+						if ( original_item !== current_item ) {
+							$root.$current_touch_item = null;
+							$root.current_touch_y_pos = null;
+							return;
+						}//end if
 
-					methods.select_item( $(this), $root );
-					methods.update_target( $root );
+						// if there are no changedTouches, bail
+						if ( 'undefined' === typeof e.changedTouches || 0 === e.changedTouches.length ) {
+							$root.$current_touch_item = null;
+							$root.current_touch_y_pos = null;
+							return;
+						}//end if
+
+						//we need a bit of a delay here and below to avoid race conditions that prevent these from firing correctly
+						var lastTest = window.setTimeout(
+							function(){
+
+							// if the changed touches moved more than 10 pixels in any direction, bail (we're probably scrolling)
+							if ( ( $root.current_touch_y_pos + 10 ) < e.changedTouches[0].pageY || ( $root.current_touch_y_pos - 10 ) > e.changeTouches[0].pageY ) {
+								$root.$current_touch_item = null;
+								$root.current_touch_y_pos = null;
+								return;
+							}//end if
+						}, 200);
+
+						var changeStuff = window.setTimeout(
+							function(){
+
+							$root.$current_touch_item = null;
+							$root.current_touch_y_pos = null;
+
+							methods.select_item( $ele, $root );
+							methods.update_target( $root );
+						}, 500);
 				});
 
 				// click event: root element
