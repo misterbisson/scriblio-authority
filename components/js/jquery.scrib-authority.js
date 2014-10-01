@@ -223,7 +223,7 @@
 					}
 
 					// if the changed touches moved more than 10 pixels in any direction, bail (we're probably scrolling)
-					if ( $root.current_touch_y_pos + 10 < e.changedTouches[0].pageY || $root.current_touch_y_pos - 10 > e.changeTouches[0].pageY ) {
+					if ( ( $root.current_touch_y_pos + 10 ) < e.changedTouches[0].pageY || ( $root.current_touch_y_pos - 10 ) > e.changedTouches[0].pageY ) {
 						$root.$current_touch_item = null;
 						$root.current_touch_y_pos = null;
 						return;
