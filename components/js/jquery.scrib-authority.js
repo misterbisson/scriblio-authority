@@ -635,7 +635,9 @@
 				$newitem.removeClass( selectors.newitem.substring( 1 ) ).appendTo( $root.find( selectors.items ) );
 				items.push( $newitem.data( 'origin-data' ) );
 			} else {
-				$root.find( selectors.items ).append( $item );
+				var $newitem = $item.clone();
+
+				$root.find( selectors.items ).append( $newitem );
 				items.push( $item.data( 'origin-data' ) );
 			}//end else
 
@@ -647,6 +649,8 @@
 
 			// advertise that an item has been selected
 			$item.trigger( 'scriblio-authority-item-selected', { item: $item });
+
+			methods.hide_results( $root );
 		},
 		/**
 		 * serialize the selected items into an array
