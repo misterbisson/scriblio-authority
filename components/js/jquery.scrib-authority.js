@@ -90,10 +90,10 @@
 			selectors.close     = selectors.item + ' .close';
 
 			var $results = $('<ul class="' + selector +'-results"/>');
-			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-results"><h4>' + options.labels.results + '</h4><ul></ul></li>') );
+			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-results"><header>' + options.labels.results + '</header><ul></ul></li>') );
 
 			if ( options.custom_enabled ) {
-				$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><h4>Custom</h4><ul></ul></li>') );
+				$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><header>Custom</header><ul></ul></li>') );
 			}//end if
 
 			$results.find('.' + selector + '-result-category-results ul').append('<li class="' + selector + '-no-results">No terms were found matching your search.</li>');
