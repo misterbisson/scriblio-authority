@@ -34,6 +34,8 @@
  *
  */
 (function( $ ) {
+	'use strict';
+
 	var defaults = {
 		id: null,
 		classes: null,
@@ -53,7 +55,7 @@
 	var methods = {
 		init: function( params ) {
 
-			if ( 'undefined' != typeof params && 'undefined' != typeof params.url ) {
+			if ( 'undefined' !== typeof params && 'undefined' !== typeof params.url ) {
 				scrib_authority_suggest.url = params.url;
 			}
 
@@ -66,14 +68,17 @@
 
 			options = $.extend( defaults, params );
 
-			var type = 'undefined' != typeof this.attr( 'type' ) ? this.attr( 'type' ) : 'text';
+			var type = 'undefined' !== typeof this.attr( 'type' ) ? this.attr( 'type' ) : 'text';
 
 			// set up the html injection variables
 			html = {
-				wrapper : '<div class="' + selector + '" />',
-				item    : '<li class="' + selector + '-item" />',
-				items   : '<ul class="' + selector + '-items"></ul>',
-				entry   : '<input type="' + type + '" class="' + selector + '-entry ' + selector + '-input" />'
+				$wrapper : $( '<div/>', { class: selector } ),
+				$item    : $( '<li/>', { class: selector + '-item' } ),
+				$items   : $( '<ul/>', { class: selector + '-items' } ),
+				$entry   : $( '<input/>', {
+					type: type,
+					class: selector + '-entry ' + selector + '-input'
+				} )
 			};
 
 			// initilaize the common selectors that we'll be using
@@ -89,18 +94,50 @@
 			selectors.results   = selectors.wrapper + '-results';
 			selectors.close     = selectors.item + ' .close';
 
-			var $results = $('<ul class="' + selector +'-results"/>');
-			$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-results"><header>' + options.labels.results + '</header><ul></ul></li>') );
+			var $results = $( '<ul/>', {
+				class: selector +'-results'
+			} );
+
+			// create the <li> that'll hold the header and record <ul>
+			var $results_li = $( '<li/>', {
+				class: selector + '-result-category ' + selector + '-result-category-results'
+			} );
+
+			// add a header for the result li
+			$results_li.append( $( '<header/>', {
+				text: options.labels.results
+			} ) );
+
+			// add a container for result records
+			$results_li.append( '<ul/>' );
+
+			// add the result li
+			$results.append( $results_li );
 
 			if ( options.custom_enabled ) {
-				$results.append( $('<li class="' + selector + '-result-category ' + selector + '-result-category-custom"><header>Custom</header><ul></ul></li>') );
+				var $custom_results_li = $( '<li/>', {
+					class: selector + '-result-category ' + selector + '-result-category-custom'
+				} );
+
+				$custom_results_li.append( $( '<header/>', {
+					text: 'Custom'
+				} ) );
+
+				$custom_results_li.append( '<ul/>' );
+
+				$results.append( $custom_results_li );
 			}//end if
 
-			$results.find('.' + selector + '-result-category-results ul').append('<li class="' + selector + '-no-results">No terms were found matching your search.</li>');
+			$results.find('.' + selector + '-result-category-results ul').append( $( '<li/>', {
+				class: selector + '-no-results',
+				text: 'No terms were found matching your search.'
+			} ) );
 
-			var $entry_container = $('<div class="' + selector + '-entry-container"/>');
+			var $entry_container = $( '<div/>', {
+				class: selector + '-entry-container'
+			} );
 
-			$entry_container.append( html.entry );
+			$entry_container.append( html.$entry );
 
 			if ( ! options.replace_field ) {
 				$entry_container.find( selectors.wrapper + '-input' ).removeClass( selectors.entry.substr( 1 ) );
@@ -115,7 +152,7 @@
 
 				// wrap and hide the original bound element
 				$orig = $( this );
-				$orig.wrap( html.wrapper );
+				$orig.wrap( html.$wrapper );
 
 				if ( options.replace_field ) {
 					$orig.hide();
@@ -149,19 +186,21 @@
 				}//end if
 
 				// add the items container
-				$root.append( html.items );
+				$root.append( html.$items );
 
 				// add the entry/results container
 				$root.append( $entry_container );
 
 				//set top to the inverse of search-box margin to ensure it snugs up to the search box
 				$entry_container.css('top', function() {
-					var margin = $( selectors.entry ).css( 'margin-bottom' ).replace("px", "");
+					var margin = $( selectors.entry ).css( 'margin-bottom' ).replace( 'px', '' );
 
 					return parseInt( margin, 10 ) * -1;
 				});
 
-				$root.append('<div class="' + selector + '-clearfix"/>');
+				$root.append( $( '<div/>', {
+					class: selector + '-clearfix'
+				} ) );
 
 				if ( options.replace_field ) {
 					$entry = $root.find( selectors.entry );
@@ -237,7 +276,7 @@
 				});
 
 				// click event: root element
-				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', function( e ) {
+				$root.on( 'click.scrib-authority-box touchstart.scrib-authority-box MSPointerDown.scrib-authority-box', function() {
 					var $entry = $( this ).find( selectors.entry );
 					var $results = $entry.closest( '.scrib-authority-box' ).find( '.scrib-authority-box-results.has-results' );
 
@@ -397,7 +436,7 @@
 		 *
 		 * @param string which The data element to retrieve
 		 */
-		data_string: function( which ) {
+		data_string: function() {
 			var $el = methods.root( $(this) );
 			var serialized = $el.ScribAuthority('serialize');
 
@@ -423,7 +462,7 @@
 		 * @param object data Object representing an item
 		 */
 		generate_item: function( data ) {
-			var $item = $( html.item );
+			var $item = html.$item.clone();
 
 			// let's store the object that is used to generate this item.
 			$item.data( 'origin-data', data );
@@ -434,19 +473,30 @@
 					return;
 				}//end if
 
+				console.log( key, data_value );
+
 				// the only exception are the data elements.  Add them to the item's data storage
-				if( 'data' == key ) {
+				if( 'data' === key ) {
 					$.each( data_value, function( data_key, key_value ) {
 						$item.data( data_key, key_value );
 					});
-				} else if ( 'taxonomy' == key ) {
-					var $taxonomy = $('<span class="' + key + '">' + data_value.labels.singular_name + '</span>');
+				} else if ( 'taxonomy' === key ) {
+					var $taxonomy = $( '<span/>', {
+						class: key,
+						text: data_value.labels.singular_name
+					} );
+
 					$taxonomy.data( 'taxonomy', data_value );
 
 					$item.append( $taxonomy );
 				} else {
-					$item.prepend( $('<span class="' + key + '" />').html( data_value ) );
-				}//end if
+					var $inject = $( '<span/>', {
+						class: key
+					} );
+
+					$inject.html( data_value );
+					$item.prepend( $inject );
+				}//end else
 			});
 
 			// gotta add the close box!
@@ -525,7 +575,7 @@
 			$.each( items, function( i, value ) {
 				var temp_combo = value.taxonomy.name + ':' + value.term;
 				var temp_origin_combo = origin.taxonomy.name + ':' + origin.term;
-				if ( temp_combo != temp_origin_combo ) {
+				if ( temp_combo !== temp_origin_combo ) {
 					new_items.push( value );
 				}//end if
 			});
@@ -550,7 +600,6 @@
 		results: function( data ) {
 			return this.each( function() {
 				var $el = $(this);
-				var $root = methods.root( $el );
 				var items = $el.data('items');
 
 				if ( ! items ) {
@@ -563,7 +612,7 @@
 					$.each( data, function( i, value ) {
 						// if the results item DOES NOT exist in the set of elements already selected,
 						//   add it to the result area
-						if ( 0 === $.grep( items, function( element, index ) { return element.data.term === value.data.term; }).length ) {
+						if ( 0 === $.grep( items, function( element ) { return element.data.term === value.data.term; }).length ) {
 							$el.ScribAuthority('result', value);
 						}//end if
 					});
@@ -604,7 +653,7 @@
 			var xhr = $.getJSON( url, params );
 
 			xhr.done( function( data ) {
-				if ( typeof data != 'undefined' ) {
+				if ( typeof data !== 'undefined' ) {
 					$root.ScribAuthority('results', data);
 					methods.show_results( $root );
 				}//end if
@@ -617,6 +666,7 @@
 		 * @param jQueryObject $root Root Authority UI element
 		 */
 		select_item: function( $item, $root ) {
+			var $newitem;
 			// get the cached items object from the root element
 			var items = $root.data('items') || [];
 
@@ -624,7 +674,7 @@
 			$root.data( 'items', items );
 
 			if( $item.is( selectors.newitem ) ) {
-				var $newitem = $item.clone();
+				$newitem = $item.clone();
 				$newitem.data('origin-data', {
 					taxonomy: $item.find('.taxonomy').data('taxonomy'),
 					term: $item.find('.term').html()
@@ -635,7 +685,7 @@
 				$newitem.removeClass( selectors.newitem.substring( 1 ) ).appendTo( $root.find( selectors.items ) );
 				items.push( $newitem.data( 'origin-data' ) );
 			} else {
-				var $newitem = $item.clone();
+				$newitem = $item.clone();
 
 				$root.find( selectors.items ).append( $newitem );
 				items.push( $item.data( 'origin-data' ) );
@@ -699,8 +749,15 @@
 
 			if ( options.taxonomies ) {
 				$.each( options.taxonomies, function( i, value ) {
-					var $item = $('<li class="' + selector + '-item ' + selector + '-new"/>');
-					var $taxonomy = $('<span class="taxonomy">' + value.labels.singular_name + '</span>');
+					var $item = $( '<li/>', {
+						class: selector + '-item ' + selector + '-new'
+					} );
+
+					var $taxonomy = $( '<span/>', {
+						class: 'taxonomy',
+						text: value.labels.singular_name
+					} );
+
 					$taxonomy.data('taxonomy', value);
 					$item.append( $taxonomy );
 					$item.prepend( '<span class="term"></span>' );
