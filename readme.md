@@ -1,4 +1,4 @@
-=== Scriblio Authority ===
+# === Scriblio Authority ===
 Contributors: misterbisson, borkweb
 Donate link: http://MaisonBisson.com/
 Tags: tags, custom taxonomies, term authority, tag management, 
@@ -8,10 +8,15 @@ Stable tag: trunk
 
 Tag management made powerful.
 
-== Description ==
+### == Description ==
 
 Bring order to chaos: manage tags and other custom taxonomy terms. Make them do party tricks.
 
-= Fork me! =
+### = Fork me! =
 
 This plugin is on Github: https://github.com/misterbisson/scriblio-authority
+
+### = Build status =
+
+- Master: <a href="https://travis-ci.org/misterbisson/scriblio-authority"><img src="https://travis-ci.org/misterbisson/scriblio-authority.svg?branch=master" alt="build status"" /></a>
+
