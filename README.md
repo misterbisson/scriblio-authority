@@ -18,5 +18,5 @@ This plugin is on Github: https://github.com/misterbisson/scriblio-authority
 
 ### = Build status =
 
-- Master: <a href="https://travis-ci.org/misterbisson/scriblio-authority"><img src="https://travis-ci.org/misterbisson/scriblio-authority.svg?branch=master" alt="build status"" /></a>
+- Master: <a href="https://travis-ci.org/misterbisson/scriblio-authority"><img src="https://travis-ci.org/misterbisson/scriblio-authority.svg?branch=master" alt="build status" /></a>
 
