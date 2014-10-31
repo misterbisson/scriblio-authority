@@ -443,7 +443,7 @@
 			var terms = [];
 
 			$.each( serialized, function( index, value ) {
-				terms.push( value.taxonomy.name + ':' + value.term );
+				terms.push( value.taxonomy + ':' + value.term );
 			});
 
 			return terms.join(',');
@@ -473,8 +473,6 @@
 					return;
 				}//end if
 
-				console.log( key, data_value );
-
 				// the only exception are the data elements.  Add them to the item's data storage
 				if( 'data' === key ) {
 					$.each( data_value, function( data_key, key_value ) {
@@ -486,9 +484,9 @@
 						text: data_value.labels.singular_name
 					} );
 
-					$taxonomy.data( 'taxonomy', data_value );
-
 					$item.append( $taxonomy );
+
+					$taxonomy.attr( 'data-taxonomy', data_value.name );
 				} else {
 					var $inject = $( '<span/>', {
 						class: key
@@ -758,11 +756,12 @@
 						text: value.labels.singular_name
 					} );
 
-					$taxonomy.data('taxonomy', value);
 					$item.append( $taxonomy );
 					$item.prepend( '<span class="term"></span>' );
 					$item.append( '<span class="close">x</span>' );
 					$categories.append( $item );
+
+					$taxonomy.attr( 'data-taxonomy', value.name );
 				});
 			}//end else
 	  },
