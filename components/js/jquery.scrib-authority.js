@@ -477,6 +477,7 @@
 				if( 'data' === key ) {
 					$.each( data_value, function( data_key, key_value ) {
 						$item.data( data_key, key_value );
+						$item.attr( 'data-' + data_key, key_value );
 					});
 				} else if ( 'taxonomy' === key ) {
 					var $taxonomy = $( '<span/>', {
@@ -711,7 +712,7 @@
 
 				var row = {
 					taxonomy: $term.find('.taxonomy').data('taxonomy'),
-					term: $term.find('.term').html()
+					term: $term.data('slug')
 				};
 
 				data.push( row );
