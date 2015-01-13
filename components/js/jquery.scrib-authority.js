@@ -410,9 +410,24 @@
 						return false;
 					}//end if
 
+					// if a valid char is pressed
 					if ( 48 <= code || 8 === code || 46 === code ) {
-						// if a valid char is pressed
-						$root.find( selectors.newitem ).find('.term').html( val );
+						var $custom = $root.find( selectors.newitem );
+
+						// loop over the custom "results" and set their term values and associated data attributes
+						$custom.each( function() {
+							var $el = $( this );
+
+							// make a slug-friendly version of the value entered by the user
+							var clean_val = val.toLowerCase();
+							clean_val = clean_val.replace( /[^a-z0-9\-\_ ]/g, ' ' );
+							clean_val = clean_val.replace( / +/g, '-' );
+
+							$el.find( '.term' ).html( val );
+							$el.attr( 'data-term', $el.find( '.taxonomy' ).data( 'taxonomy' ) + ':' + clean_val );
+							$el.attr( 'data-slug', clean_val );
+						});
+
 						if( 0 === $.trim( $(this).val() ).length ) {
 							$root.closest( 'form' ).removeClass( 'has-text' );
 							$root.find( selectors.results ).removeClass( 'has-results no-results' );
