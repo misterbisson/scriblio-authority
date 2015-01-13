@@ -493,7 +493,7 @@
 					$.each( data_value, function( data_key, key_value ) {
 						$item.data( data_key, key_value );
 
-						// We need slug availble to us later on.
+						// We need the slug available to us later on.
 						if ( 'term' === data_key ) {
 							$item.attr( 'data-' + data_key, key_value );
 							var tax_term = key_value.split( ':' );
